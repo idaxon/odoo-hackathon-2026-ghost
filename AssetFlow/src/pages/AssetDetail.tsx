@@ -148,36 +148,119 @@ export default function AssetDetail() {
     if (!asset) return 'Connecting...';
     const input = userInput.toLowerCase();
     
-    if (input.includes('problem') || input.includes('health') || input.includes('feel') || input.includes('status')) {
+    // Health & Diagnostics
+    if (input.includes('problem') || input.includes('health') || input.includes('feel') || input.includes('status') || input.includes('okay') || input.includes('fine')) {
       if (asset.health_score < 50) {
-        return `Honestly, my health score has dropped to ${asset.health_score}/100. I have needed repairs ${asset.repair_cost > 0 ? 'regularly' : 'recently'}, and I feel a bit worn down. I'd appreciate some checkups!`;
+        return `To be honest with you... I've seen better days. My health score is at ${asset.health_score}/100 right now. I've been needing repairs more often than I'd like, and some days I just feel sluggish. A proper checkup would really help me get back on my feet!`;
+      } else if (asset.health_score < 80) {
+        return `I'm doing okay, not perfect but hanging in there! My health is at ${asset.health_score}/100. A few minor things could use attention, but nothing that keeps me up at night. Just don't forget about me during the next maintenance cycle, yeah? 😊`;
       } else {
-        return `I'm feeling great! My health score is currently ${asset.health_score}/100. No critical errors or failure symptoms to report.`;
+        return `I'm doing wonderful, thank you for asking! 💪 My health score is ${asset.health_score}/100 — running smooth, no errors, no complaints. Life is good when you're well-maintained!`;
       }
     }
     
-    if (input.includes('history') || input.includes('maintenance') || input.includes('service') || input.includes('timeline')) {
-      return `I was purchased on ${asset.purchase_date} from ${asset.vendor || 'direct partner'}. My last documented service check was on ${asset.last_maintenance_date || 'N/A'}. You can inspect my complete lifecycle timeline below.`;
+    // Service & Maintenance History
+    if (input.includes('history') || input.includes('maintenance') || input.includes('service') || input.includes('timeline') || input.includes('last check')) {
+      return `Great question! I was brought into this organization on ${asset.purchase_date} — that's when my journey started. My vendor was ${asset.vendor || 'a direct procurement partner'}. My most recent service visit was on ${asset.last_maintenance_date || 'N/A'}. You can scroll down to see my full lifecycle timeline with every major event documented!`;
     }
     
-    if (input.includes('financial') || input.includes('cost') || input.includes('replace') || input.includes('repair') || input.includes('value')) {
+    // Financial / Cost Analysis
+    if (input.includes('financial') || input.includes('cost') || input.includes('replace') || input.includes('repair') || input.includes('value') || input.includes('worth') || input.includes('expensive')) {
       const bookValue = Math.round(asset.purchase_cost * (asset.health_score / 100));
       if (asset.replacement_cost < asset.repair_cost) {
-        return `I cost ₹${asset.purchase_cost.toLocaleString()} initially. Replacing me costs ₹${asset.replacement_cost.toLocaleString()}, while fixing me would cost ₹${asset.repair_cost.toLocaleString()}. Replacing me makes more sense than repairing me again!`;
+        return `Let me be real with you — I originally cost ₹${asset.purchase_cost.toLocaleString()}, but repairing me now would cost ₹${asset.repair_cost.toLocaleString()} while a brand new replacement is only ₹${asset.replacement_cost.toLocaleString()}. Honestly? It might make more financial sense to replace me. I won't take it personally! 😅`;
       } else {
-        return `My current book value is estimated at ₹${bookValue.toLocaleString()}. Repairing me costs ₹${asset.repair_cost.toLocaleString()}, which is below my replacement cost of ₹${asset.replacement_cost.toLocaleString()}. I am still highly cost-effective to maintain!`;
+        return `My current estimated book value is around ₹${bookValue.toLocaleString()}. Repairing me costs ₹${asset.repair_cost.toLocaleString()}, which is well below my replacement price of ₹${asset.replacement_cost.toLocaleString()}. So I'm definitely still worth keeping around! Smart investment. 📊`;
       }
     }
     
-    if (input.includes('allocate') || input.includes('where') || input.includes('owner') || input.includes('assigned') || input.includes('department')) {
+    // Location / Allocation
+    if (input.includes('allocate') || input.includes('where') || input.includes('owner') || input.includes('assigned') || input.includes('department') || input.includes('belong') || input.includes('sitting')) {
       if (asset.assigned_to_name) {
-        return `I am currently assigned to ${asset.assigned_to_name} in the ${asset.department_name} department. If you need to re-allocate or transfer me, please use the action button in the header.`;
+        return `Right now I belong to ${asset.assigned_to_name} over in the ${asset.department_name} department. They've been taking good care of me! If you need to move me somewhere else, just hit the 'Allocate / Transfer' button up top.`;
       } else {
-        return `I am currently available in storage. If your department needs me, click the 'Allocate / Transfer' action button at the top to check me out!`;
+        return `I'm currently sitting in storage — nobody's claimed me yet! 🏠 If your team needs a ${asset.category}, I'm available and ready to work. Just use the 'Allocate / Transfer' button to check me out!`;
       }
     }
     
-    return `Hello! I'm ${asset.name} (${asset.asset_code}), a ${asset.category} currently marked as ${asset.status}. Ask me about my health, maintenance history, or repair vs replacement costs!`;
+    // Age & Lifespan
+    if (input.includes('old') || input.includes('age') || input.includes('how long') || input.includes('born') || input.includes('years')) {
+      const purchaseDate = new Date(asset.purchase_date);
+      const now = new Date();
+      const diffYears = now.getFullYear() - purchaseDate.getFullYear();
+      const diffMonths = now.getMonth() - purchaseDate.getMonth();
+      const totalMonths = diffYears * 12 + diffMonths;
+      if (totalMonths < 12) {
+        return `I'm still pretty new around here! I was born — well, purchased — on ${asset.purchase_date}, so I'm only about ${totalMonths} months old. Still got that new-equipment energy! ✨`;
+      } else if (totalMonths < 36) {
+        return `I've been around for about ${diffYears} year${diffYears > 1 ? 's' : ''} now, since ${asset.purchase_date}. I'd say I'm in my prime — experienced enough to be reliable, young enough to keep up with the workload! 💪`;
+      } else {
+        return `I've been serving this organization since ${asset.purchase_date} — that's about ${diffYears} years now! I'm a veteran at this point. I've seen teams come and go, but I'm still here doing my job. They don't make 'em like me anymore! 😄`;
+      }
+    }
+    
+    // Warranty
+    if (input.includes('warranty') || input.includes('guarantee') || input.includes('covered') || input.includes('insurance') || input.includes('protection')) {
+      const warrantyDate = new Date(asset.warranty_expiry);
+      const now = new Date();
+      if (warrantyDate > now) {
+        const diffDays = Math.floor((warrantyDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        return `Good news — I'm still under warranty! 🛡️ My coverage runs until ${asset.warranty_expiry}, which is about ${diffDays} days from now. So if anything goes wrong, we're covered. Phew!`;
+      } else {
+        return `Unfortunately, my warranty expired on ${asset.warranty_expiry}. 😬 I'm running without a safety net now. Any repairs from here on out come straight from the maintenance budget. Maybe it's time to look into an extended service plan?`;
+      }
+    }
+    
+    // Happiness / Mood
+    if (input.includes('happy') || input.includes('mood') || input.includes('enjoy') || input.includes('like your job') || input.includes('satisfied') || input.includes('love')) {
+      if (asset.health_score >= 80) {
+        return `You know what? I actually love what I do! 😊 I'm well-maintained, my health is strong at ${asset.health_score}/100, and ${asset.assigned_to_name || 'the team'} treats me right. Can't ask for much more than that!`;
+      } else {
+        return `Honestly, I've been a little down lately. My health is at ${asset.health_score}/100, and I could really use some TLC. But hey, the fact that you're talking to me right now? That already makes my day better! 💛`;
+      }
+    }
+
+    // Tired / Overworked
+    if (input.includes('tired') || input.includes('overwork') || input.includes('rest') || input.includes('break') || input.includes('burnout') || input.includes('exhausted')) {
+      if (asset.health_score < 60) {
+        return `Now that you mention it... yes, I am feeling pretty exhausted. 😓 My health score is down to ${asset.health_score}/100. I've been working hard without enough maintenance breaks. A scheduled downtime for servicing would really help me recharge!`;
+      } else {
+        return `I'm managing my workload well, thanks for caring! 😌 My health is at ${asset.health_score}/100, so I've got plenty of energy left. But I never say no to a good maintenance session — think of it like a spa day for equipment!`;
+      }
+    }
+
+    // Introduce yourself
+    if (input.includes('who are you') || input.includes('introduce') || input.includes('tell me about yourself') || input.includes('yourself') || input.includes('what are you')) {
+      return `Nice to meet you! 👋 I'm ${asset.name}, serial number ${asset.serial_number}. I'm a ${asset.category} with asset code ${asset.asset_code}. I'm currently marked as "${asset.status}" and my condition is rated "${asset.condition}". I joined this organization on ${asset.purchase_date} and I've been working hard ever since!`;
+    }
+
+    // Advice / Suggestion
+    if (input.includes('advice') || input.includes('suggest') || input.includes('recommend') || input.includes('should') || input.includes('what do you think') || input.includes('opinion')) {
+      if (asset.health_score < 50 && asset.replacement_cost < asset.repair_cost) {
+        return `If you want my honest opinion? 🤔 My health is at ${asset.health_score}/100 and replacing me is cheaper than fixing me. I think it's time to start planning my successor. I've had a good run, but the numbers don't lie!`;
+      } else if (asset.health_score < 70) {
+        return `Here's my advice: schedule me for a maintenance session soon. My health is at ${asset.health_score}/100 — not critical, but trending in the wrong direction. A little preventive care now saves a lot of emergency repairs later! 🔧`;
+      } else {
+        return `Honestly? Just keep doing what you're doing! 🌟 My health is great at ${asset.health_score}/100, I'm well-allocated, and things are running smoothly. Maybe just make sure my next maintenance check doesn't get skipped!`;
+      }
+    }
+
+    // Complain / Frustration
+    if (input.includes('complain') || input.includes('frustrated') || input.includes('wrong') || input.includes('issue') || input.includes('broken') || input.includes('not working')) {
+      if (asset.health_score < 60) {
+        return `I hear you, and honestly I've been wanting to speak up too! 😤 My health score is only ${asset.health_score}/100. My last maintenance was on ${asset.last_maintenance_date || 'way too long ago'}. I need attention — please consider raising a maintenance ticket for me using the 'Report Issue' button!`;
+      } else {
+        return `I appreciate you checking! Right now I don't have any major complaints — my health is at ${asset.health_score}/100 and I'm performing well. But if something does come up, please use the 'Report Issue' button so the maintenance team can jump on it quickly! 🛠️`;
+      }
+    }
+
+    // Thank you / Goodbye
+    if (input.includes('thank') || input.includes('bye') || input.includes('goodbye') || input.includes('see you') || input.includes('later')) {
+      return `Thank you for checking in on me! 🙏 It really means a lot. Not every asset gets this kind of attention. Take care, and don't be a stranger — I'm always here if you need to chat!`;
+    }
+    
+    // Default fallback
+    return `Hey there! I'm ${asset.name} (${asset.asset_code}), a ${asset.category} currently marked as "${asset.status}". I can tell you about my health, maintenance history, repair costs, warranty status, how I'm feeling, my age, or even give you advice! Just ask away — I'm an open book. 📖`;
   };
 
   const handleSendChatMessage = (text: string) => {
@@ -454,35 +537,77 @@ export default function AssetDetail() {
             <div className="p-5 border-t border-border-light bg-surface space-y-4">
               {/* Quick Questions Prompts */}
               <div className="space-y-1.5">
-                <span className="text-[9px] font-bold uppercase tracking-wider text-text-muted block">Demo Presets:</span>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-text-muted block">Talk to me:</span>
                 <div className="flex flex-wrap gap-1.5">
                   <button
                     type="button"
-                    onClick={() => handleSendChatMessage("How are you feeling / are there any problems?")}
-                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm animate-appear"
+                    onClick={() => handleSendChatMessage("Hey, how are you feeling today?")}
+                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
                   >
-                    🩺 Diagnostics & Problems?
+                    🩺 How are you feeling?
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleSendChatMessage("Tell me about your maintenance history.")}
-                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm animate-appear"
+                    onClick={() => handleSendChatMessage("How old are you?")}
+                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
                   >
-                    📅 Service History?
+                    🎂 How old are you?
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleSendChatMessage("What is your cost status (repair vs replace)?")}
-                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm animate-appear"
+                    onClick={() => handleSendChatMessage("Are you still under warranty?")}
+                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
                   >
-                    💰 Repair vs Replace Cost?
+                    🛡️ Warranty status?
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleSendChatMessage("Where are you currently allocated?")}
-                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm animate-appear"
+                    onClick={() => handleSendChatMessage("Are you happy with your job here?")}
+                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
                   >
-                    🏢 Department & Owner?
+                    😊 Are you happy?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSendChatMessage("Are you feeling tired or overworked?")}
+                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
+                  >
+                    😓 Are you tired?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSendChatMessage("Tell me about your repair vs replace cost.")}
+                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
+                  >
+                    💰 Repair vs Replace?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSendChatMessage("Do you have any complaints or issues?")}
+                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
+                  >
+                    😤 Any complaints?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSendChatMessage("Can you introduce yourself?")}
+                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
+                  >
+                    👋 Introduce yourself
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSendChatMessage("What do you think — any advice for us?")}
+                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
+                  >
+                    💡 Give me advice
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSendChatMessage("Thanks for talking, goodbye!")}
+                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm"
+                  >
+                    👋 Say goodbye
                   </button>
                 </div>
               </div>
