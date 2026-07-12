@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Plus, Search, X, Download, Cpu, Smartphone, Monitor, HardDrive, Sparkles, Check, Image as ImageIcon } from 'lucide-react';
 
@@ -12,6 +13,7 @@ interface Asset {
 }
 
 export default function Assets() {
+  const navigate = useNavigate();
   // 9 Initial Mock Rows
   const [assets, setAssets] = useState<Asset[]>([
     { id: 'AF-0001', name: 'MacBook Pro 16" (M3 Max)', category: 'Workstation', department: 'Engineering', status: 'In Use', healthScore: 94 },
@@ -173,7 +175,11 @@ export default function Assets() {
           </thead>
           <tbody className="divide-y divide-border-light bg-white">
             {filteredAssets.map((asset) => (
-              <tr key={asset.id} className="hover:bg-gray-50/50 transition-colors">
+              <tr 
+                key={asset.id} 
+                className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                onClick={() => navigate(`/assets/${asset.id}`)}
+              >
                 <td className="px-6 py-4 font-mono text-xs font-semibold text-text">{asset.id}</td>
                 <td className="px-6 py-4 font-medium text-text">{asset.name}</td>
                 <td className="px-6 py-4">
