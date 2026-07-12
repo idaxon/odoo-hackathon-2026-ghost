@@ -42,5 +42,8 @@ export const api = {
   getAIAvailableCategory: (category: string) => request(`/ai/available/${category}`),
   getAIMaintenanceToday: () => request('/ai/maintenance-today'),
   getSystemIp: () => request('/system/ip'),
-  getAssetVoice: (id: string) => request(`/assets/${id}/voice`)
+  getAssetVoice: (id: string) => request(`/assets/${id}/voice`),
+  postAssetScanLog: (id: string, locationNote: string, scannedBy: string) => 
+    request(`/assets/${id}/scan-log`, { method: 'POST', body: JSON.stringify({ location_note: locationNote, scanned_by: scannedBy }) }),
+  getAssetScanHistory: (id: string) => request(`/assets/${id}/scan-history`)
 };

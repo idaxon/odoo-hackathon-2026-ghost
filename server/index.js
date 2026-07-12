@@ -504,6 +504,47 @@ app.get('/api/assets/:id/voice', (req, res) => {
   }
 });
 
+// POST /api/assets/:id/scan-log → Record a scan event
+app.post('/api/assets/:id/scan-log', (req, res) => {
+  const { id } = req.params;
+  const { location_note, scanned_by } = req.body;
+  try {
+    const asset = db.prepare('SELECT id, name FROM assets WHERE id = ? OR asset_code = ?').get(id, id);
+    if (!asset) {
+      return res.status(404).json({ error: 'Asset not found.' });
+    }
+
+    const loc = location_note || 'Unknown location';
+    const actor = scanned_by || 'Public Scanner';
+    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+
+    db.prepare('INSERT INTO scan_logs (asset_id, scanned_by, location_note, timestamp) VALUES (?, ?, ?, ?)')
+      .run(asset.id, actor, loc, timestamp);
+
+    logActivity(actor, 'scanned QR code', `for ${asset.name} at ${loc}`);
+
+    res.status(201).json({ message: 'Scan logged successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/assets/:id/scan-history → Get scan logs for that asset, newest first
+app.get('/api/assets/:id/scan-history', (req, res) => {
+  const { id } = req.params;
+  try {
+    const asset = db.prepare('SELECT id FROM assets WHERE id = ? OR asset_code = ?').get(id, id);
+    if (!asset) {
+      return res.status(404).json({ error: 'Asset not found.' });
+    }
+
+    const rows = db.prepare('SELECT * FROM scan_logs WHERE asset_id = ? ORDER BY id DESC').all(asset.id);
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Start Server
 app.listen(PORT, () => {
   console.log(`AssetFlow backend listening on http://localhost:${PORT}`);

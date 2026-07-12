@@ -79,6 +79,15 @@ db.exec(`
     target TEXT NOT NULL,
     timestamp TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS scan_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    asset_id INTEGER NOT NULL,
+    scanned_by TEXT NOT NULL,
+    location_note TEXT NOT NULL,
+    timestamp TEXT NOT NULL,
+    FOREIGN KEY(asset_id) REFERENCES assets(id)
+  );
 `);
 
 // Seeding Logic
@@ -307,6 +316,25 @@ const seedDatabase = () => {
       insertLog.run(log.actor, log.action, log.target, log.time);
     }
     console.log('Seeded activity logs.');
+  }
+
+  // 7. Seed Scan Logs
+  const scanCount = db.prepare('SELECT COUNT(*) as count FROM scan_logs').get().count;
+  if (scanCount === 0) {
+    const insertScan = db.prepare('INSERT INTO scan_logs (asset_id, scanned_by, location_note, timestamp) VALUES (?, ?, ?, ?)');
+    const scans = [
+      { code: 'AF-0001', user: 'Elena Rostova', location: 'Engineering Block 3', time: '2026-07-10 10:30' },
+      { code: 'AF-0001', user: 'Public Scanner', location: 'Server Room A', time: '2026-07-11 14:15' },
+      { code: 'AF-0004', user: 'Alex Mercer', location: 'Marketing Floor 1', time: '2026-07-11 09:00' },
+      { code: 'AF-0012', user: 'Sarah Connor', location: 'HR Storage Locker', time: '2026-07-12 08:30' }
+    ];
+    for (const s of scans) {
+      const assetId = assetsMap[s.code];
+      if (assetId) {
+        insertScan.run(assetId, s.user, s.location, s.time);
+      }
+    }
+    console.log('Seeded scan logs.');
   }
 };
 

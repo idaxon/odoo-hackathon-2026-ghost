@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Cpu, Smartphone, Monitor, HardDrive, Sparkles, AlertCircle, Wrench, Battery, X, User, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Cpu, Smartphone, Monitor, HardDrive, Sparkles, AlertCircle, Wrench, Battery, X, User, CheckCircle2, MapPin } from 'lucide-react';
 import { api } from '../api';
 import { QRCodeCanvas } from 'qrcode.react';
 
@@ -9,6 +9,31 @@ interface TimelineStep {
   date: string;
   desc: string;
 }
+
+interface ScanLog {
+  id: number;
+  asset_id: number;
+  scanned_by: string;
+  location_note: string;
+  timestamp: string;
+}
+
+const formatTimeAgo = (timestampStr: string) => {
+  try {
+    const dt = new Date(timestampStr.replace(' ', 'T'));
+    const now = new Date();
+    const diffMs = now.getTime() - dt.getTime();
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    return `${diffDays}d ago`;
+  } catch (e) {
+    return timestampStr;
+  }
+};
 
 interface AssetDetailData {
   id: number;
@@ -55,6 +80,11 @@ export default function AssetDetail() {
   const [reportPriority, setReportPriority] = useState<'Low' | 'Medium' | 'High' | 'Critical'>('Medium');
   const [reportDescription, setReportDescription] = useState('');
 
+  // Location Tracking State
+  const [scanHistory, setScanHistory] = useState<ScanLog[]>([]);
+  const [showCheckInAlert, setShowCheckInAlert] = useState(isScanned);
+  const [checkInLocation, setCheckInLocation] = useState('');
+
   // Seeded database reference mappings (CORS safe database IDs)
   const employees = [
     { id: 1, name: 'Sarah Connor' },
@@ -78,10 +108,27 @@ export default function AssetDetail() {
       setAsset(data);
       const voiceRes = await api.getAssetVoice(assetId);
       setVoiceText(voiceRes.voiceText || '');
+      const history = await api.getAssetScanHistory(assetId);
+      setScanHistory(history || []);
     } catch (error) {
       console.error('Failed to load asset details:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCheckInSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!asset) return;
+    try {
+      await api.postAssetScanLog(String(asset.id), checkInLocation || 'Unknown location', 'Public Scanner');
+      setShowCheckInAlert(false);
+      setCheckInLocation('');
+      if (id) {
+        loadAssetDetail(id);
+      }
+    } catch (err) {
+      console.error('Failed to log scan:', err);
     }
   };
 
@@ -243,6 +290,40 @@ export default function AssetDetail() {
         </div>
       )}
 
+      {/* QR Code Scanned Inline Check-In Form */}
+      {isScanned && showCheckInAlert && (
+        <div className="card-premium p-4 border-l-4 border-l-secondary bg-white shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 animate-appear">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-secondary/15 text-secondary flex items-center justify-center flex-shrink-0">
+              <MapPin size={16} />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-text">QR Scan Detected!</h4>
+              <p className="text-xs text-text-muted">Where is this asset currently located?</p>
+            </div>
+          </div>
+          <form onSubmit={handleCheckInSubmit} className="flex gap-2 w-full sm:w-auto">
+            <input 
+              type="text" 
+              placeholder="e.g. Marketing Floor 2" 
+              className="input-premium py-1.5 px-3 text-xs w-full sm:w-60"
+              value={checkInLocation}
+              onChange={(e) => setCheckInLocation(e.target.value)}
+            />
+            <button type="submit" className="btn-primary py-1.5 px-4 text-xs font-semibold">
+              Save Location
+            </button>
+            <button 
+              type="button" 
+              onClick={() => setShowCheckInAlert(false)}
+              className="btn-secondary py-1.5 px-3 text-xs"
+            >
+              Skip
+            </button>
+          </form>
+        </div>
+      )}
+
       {/* Main Details Panel Layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
@@ -268,8 +349,22 @@ export default function AssetDetail() {
               <p className="font-medium text-text">{asset.assigned_to_name || 'Unassigned'}</p>
             </div>
             <div>
-              <p className="text-[10px] uppercase font-bold tracking-wider text-text-muted mb-0.5">Department</p>
-              <p className="font-medium text-text">{asset.department_name}</p>
+              {scanHistory.length >= 2 ? (
+                <>
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-secondary mb-0.5">Last Seen</p>
+                  <p className="font-bold text-text truncate">
+                    {scanHistory[0].location_note}{' '}
+                    <span className="text-[10px] text-text-muted font-normal">
+                      ({formatTimeAgo(scanHistory[0].timestamp)})
+                    </span>
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-[10px] uppercase font-bold tracking-wider text-text-muted mb-0.5">Department</p>
+                  <p className="font-medium text-text">{asset.department_name}</p>
+                </>
+              )}
             </div>
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-text-muted mb-0.5">Purchase Date</p>
@@ -406,6 +501,55 @@ export default function AssetDetail() {
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Location Trail (QR Scan Logs) */}
+      <div className="card-premium p-6 bg-white space-y-4">
+        <h3 className="text-xs font-bold text-text-muted uppercase tracking-wider border-b border-border-light pb-2">
+          Location Trail (QR Scan Logs)
+        </h3>
+        
+        <div className="flow-root">
+          <ul className="-mb-8">
+            {scanHistory.map((log, idx) => (
+              <li key={log.id}>
+                <div className="relative pb-8">
+                  {idx !== scanHistory.length - 1 && (
+                    <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200" aria-hidden="true"></span>
+                  )}
+                  <div className="relative flex space-x-3">
+                    <div>
+                      <span className="h-8 w-8 rounded-full bg-secondary/15 flex items-center justify-center ring-8 ring-white text-secondary">
+                        <MapPin size={13} />
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0 pt-1.5 flex justify-between space-x-4">
+                      <div>
+                        <p className="text-xs font-semibold text-text">
+                          Checked in at <span className="font-bold text-secondary">{log.location_note}</span>
+                        </p>
+                        <p className="text-[10px] text-text-muted mt-0.5">
+                          Actor Node: {log.scanned_by}
+                        </p>
+                      </div>
+                      <div className="text-right text-[10px] whitespace-nowrap text-text-muted font-mono">
+                        {log.timestamp}{' '}
+                        <span className="text-[9px] block text-text-muted">
+                          ({formatTimeAgo(log.timestamp)})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            ))}
+            {scanHistory.length === 0 && (
+              <div className="text-center text-xs text-text-muted py-2 font-medium">
+                No scan location check-ins logged for this asset.
+              </div>
+            )}
+          </ul>
         </div>
       </div>
 
