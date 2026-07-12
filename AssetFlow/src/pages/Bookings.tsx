@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, X, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Plus, X, AlertTriangle, ArrowRight, Trash2, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { api } from '../api';
 
 interface Booking {
@@ -46,7 +46,6 @@ export default function Bookings() {
   const getBookingStatus = (start: string, end: string) => {
     try {
       const now = new Date();
-      // Replace space with T to allow iOS Safari date parsing
       const startDate = new Date(start.replace(' ', 'T'));
       const endDate = new Date(end.replace(' ', 'T'));
       if (endDate < now) return 'Completed';
@@ -68,18 +67,14 @@ export default function Bookings() {
     }
   };
 
-  // Logic to find a free alternative resource of same type that does not overlap start/end time
   const findAlternativeResource = (type: string, start: string, end: string) => {
     const rooms = ['Boardroom', 'Meeting Room A', 'Meeting Room C'];
     const equipments = ['Design Lab Projector', 'Testing Rack B1', 'Virtual VR headset'];
-
     const candidates = type === 'Room' ? rooms : equipments;
     
-    // Convert inputs to date objects
     const newStart = new Date(start.replace(' ', 'T'));
     const newEnd = new Date(end.replace(' ', 'T'));
 
-    // Check which candidate has no overlapping bookings in this range
     for (const resName of candidates) {
       const hasOverlap = bookings.some(b => {
         if (b.resource_name !== resName) return false;
@@ -100,7 +95,6 @@ export default function Bookings() {
     setConflictError(null);
     setSuggestedResource(null);
 
-    // Format times to YYYY-MM-DD HH:MM
     const formattedStart = formStart.replace('T', ' ');
     const formattedEnd = formEnd.replace('T', ' ');
 
@@ -116,14 +110,11 @@ export default function Bookings() {
       const response = await api.createBooking(payload);
       if (response && response.conflict) {
         setConflictError(response.message || 'Conflict detected.');
-        
-        // Find alternative resource of same type
         const alt = findAlternativeResource(formType, formattedStart, formattedEnd);
         if (alt) {
           setSuggestedResource(alt);
         }
       } else {
-        // Success
         setIsPanelOpen(false);
         setFormResource('Meeting Room B');
         loadBookings();
@@ -132,6 +123,45 @@ export default function Bookings() {
       console.error('Failed to create booking:', err);
     }
   };
+
+  const handleCancelBooking = async (id: number) => {
+    if (!window.confirm('Are you sure you want to cancel and release this reservation?')) return;
+    try {
+      await api.deleteBooking(id);
+      loadBookings();
+    } catch (err) {
+      console.error('Failed to cancel booking:', err);
+    }
+  };
+
+  // Helper to determine who is booking a resource at a specific hour on 2026-07-12
+  const getBookingForHour = (resourceName: string, hour: number) => {
+    return bookings.find(b => {
+      if (b.resource_name.toLowerCase() !== resourceName.toLowerCase()) return false;
+      if (!b.start_time.startsWith('2026-07-12')) return false;
+      
+      const startHour = parseInt(b.start_time.split(' ')[1].split(':')[0]);
+      const endHour = parseInt(b.end_time.split(' ')[1].split(':')[0]);
+      return hour >= startHour && hour < endHour;
+    });
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .substring(0, 2)
+      .toUpperCase();
+  };
+
+  const trackResources = [
+    { name: 'Meeting Room B', type: 'Room' },
+    { name: 'Boardroom', type: 'Room' },
+    { name: 'Design Lab Projector', type: 'Equipment' }
+  ];
+  
+  const hoursRange = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19];
 
   return (
     <div className="space-y-6 max-w-5xl font-sans">
@@ -152,24 +182,82 @@ export default function Bookings() {
         </button>
       </div>
 
-      {/* Booking Status Tabs */}
+      {/* Visual Schedule Timeline Grid */}
+      <div className="card-premium p-5 bg-white space-y-4">
+        <div className="flex items-center justify-between border-b border-border-light pb-2.5">
+          <h3 className="font-semibold text-text text-sm flex items-center gap-1.5">
+            <CalendarIcon size={15} className="text-primary" /> Today's Resource Schedule (July 12, 2026)
+          </h3>
+          <span className="text-[10px] uppercase font-bold text-text-muted">Hourly Occupancy Grid</span>
+        </div>
+
+        <div className="space-y-3.5">
+          {/* Timeline Hours Header */}
+          <div className="grid grid-cols-12 gap-1 text-[9px] font-bold text-text-muted uppercase tracking-wider text-center pl-[150px] hidden sm:grid">
+            {hoursRange.map(h => (
+              <div key={h}>{h > 12 ? `${h-12} PM` : h === 12 ? '12 PM' : `${h} AM`}</div>
+            ))}
+          </div>
+
+          {/* Resource occupancy rows */}
+          <div className="space-y-3">
+            {trackResources.map(res => (
+              <div key={res.name} className="flex flex-col sm:flex-row sm:items-center gap-2">
+                {/* Resource Info Label */}
+                <div className="w-[145px] flex-shrink-0">
+                  <p className="text-xs font-bold text-text truncate">{res.name}</p>
+                  <span className="text-[9px] uppercase font-bold text-text-muted">{res.type}</span>
+                </div>
+
+                {/* 12-Hour occupancy bar */}
+                <div className="grid grid-cols-12 gap-1.5 flex-1 w-full">
+                  {hoursRange.map(hour => {
+                    const activeBkg = getBookingForHour(res.name, hour);
+                    return activeBkg ? (
+                      <div 
+                        key={hour} 
+                        title={`Booked by ${activeBkg.booked_by} (${activeBkg.start_time.split(' ')[1]} - ${activeBkg.end_time.split(' ')[1]})`}
+                        className="bg-red-50 text-red-700 border border-red-200 h-8 flex flex-col items-center justify-center rounded text-[9px] font-bold cursor-help transition-all shadow-sm select-none"
+                      >
+                        <span className="text-[10px] font-extrabold">{getInitials(activeBkg.booked_by)}</span>
+                      </div>
+                    ) : (
+                      <div 
+                        key={hour}
+                        title={`${hour > 12 ? `${hour-12} PM` : `${hour} AM`} - Available`}
+                        className="bg-gray-50 border border-border-light h-8 flex items-center justify-center rounded text-[9px] font-semibold text-text-muted hover:bg-green-50/50 hover:border-green-300 hover:text-green-700 cursor-default transition-all select-none"
+                      >
+                        <Clock size={10} className="opacity-30" />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Booking List Section Header */}
       <div className="border-b border-border-light flex gap-4 text-sm">
-        <button className="border-b-2 border-primary pb-2 font-medium text-text">All Bookings</button>
-        <button className="text-text-muted hover:text-text pb-2 font-medium">History</button>
+        <button className="border-b-2 border-primary pb-2 font-medium text-text">All Active Reservations</button>
       </div>
 
       {/* Bookings Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {loading ? (
-          // Bookings Loading Skeletons
           Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-44 w-full skeleton-pulse rounded-lg"></div>
+            <div key={i} className="h-48 w-full skeleton-pulse rounded-lg"></div>
           ))
+        ) : bookings.length === 0 ? (
+          <div className="col-span-full card-premium p-8 text-center text-text-muted text-sm bg-white">
+            No bookings registered. Click 'New Booking' to reserve a resource.
+          </div>
         ) : (
           bookings.map((booking) => {
             const status = getBookingStatus(booking.start_time, booking.end_time);
             return (
-              <div key={booking.id} className="card-premium p-4 flex flex-col justify-between space-y-4 bg-white">
+              <div key={booking.id} className="card-premium p-4 flex flex-col justify-between space-y-4 bg-white hover:border-border-medium transition-all">
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="font-mono text-xs font-semibold text-text-muted">BKG-00{booking.id}</span>
@@ -185,18 +273,27 @@ export default function Bookings() {
 
                 <div className="bg-gray-50/50 p-2.5 rounded border border-border-light text-xs space-y-1.5 text-text">
                   <div className="flex justify-between">
-                    <span className="text-text-muted">Booked By:</span>
-                    <span className="font-medium">{booking.booked_by}</span>
+                    <span className="text-text-muted font-medium">Booked By:</span>
+                    <span className="font-semibold">{booking.booked_by}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-text-muted">Start:</span>
-                    <span className="font-medium font-mono">{booking.start_time}</span>
+                    <span className="text-text-muted font-medium">Start:</span>
+                    <span className="font-semibold font-mono">{booking.start_time}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-text-muted">End:</span>
-                    <span className="font-medium font-mono">{booking.end_time}</span>
+                    <span className="text-text-muted font-medium">End:</span>
+                    <span className="font-semibold font-mono">{booking.end_time}</span>
                   </div>
                 </div>
+
+                {status !== 'Completed' && (
+                  <button 
+                    onClick={() => handleCancelBooking(booking.id)}
+                    className="w-full text-center text-xs text-red-600 border border-red-200 hover:bg-red-50 hover:border-red-300 py-1.5 rounded font-bold transition-all flex items-center justify-center gap-1 mt-1 cursor-pointer"
+                  >
+                    <Trash2 size={13} /> Cancel & Release
+                  </button>
+                )}
               </div>
             );
           })
@@ -206,13 +303,11 @@ export default function Bookings() {
       {/* Sliding Side Panel Drawer (Right-aligned) */}
       {isPanelOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
-          {/* Backdrop overlay */}
           <div 
             className="absolute inset-0 bg-black/30 transition-opacity" 
             onClick={() => setIsPanelOpen(false)}
           ></div>
 
-          {/* Drawer content body */}
           <div className="relative w-full max-w-md bg-surface shadow-xl h-full flex flex-col justify-between border-l border-border-light z-10 animate-slide-in">
             {/* Header */}
             <div className="h-16 border-b border-border-light flex items-center justify-between px-6 bg-gray-50/50">
@@ -238,7 +333,6 @@ export default function Bookings() {
                     </div>
                   </div>
 
-                  {/* Suggestion Box: same type, free alternative */}
                   {suggestedResource && (
                     <div className="pt-2 border-t border-red-200/50 flex flex-col gap-2">
                       <p className="text-xs text-red-950 font-medium">Alternative resource option available:</p>
@@ -260,6 +354,41 @@ export default function Bookings() {
                   )}
                 </div>
               )}
+
+              {/* Demo Helper Presets */}
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded text-xs space-y-2.5">
+                <span className="font-bold text-amber-900 block flex items-center gap-1">
+                  💡 Presentation Demo Hotkeys
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormResource('Meeting Room B');
+                      setFormType('Room');
+                      setFormUser('Michael Scott');
+                      setFormStart('2026-07-12T14:00');
+                      setFormEnd('2026-07-12T16:00');
+                    }}
+                    className="bg-white border border-amber-300 hover:bg-amber-100 text-amber-900 py-1 px-2 rounded font-bold transition-all text-[10px] shadow-sm"
+                  >
+                    Simulate Room B Conflict
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormResource('Boardroom');
+                      setFormType('Room');
+                      setFormUser('Pam Beesly');
+                      setFormStart('2026-07-12T08:00');
+                      setFormEnd('2026-07-12T10:00');
+                    }}
+                    className="bg-white border border-amber-300 hover:bg-amber-100 text-amber-900 py-1 px-2 rounded font-bold transition-all text-[10px] shadow-sm"
+                  >
+                    Fill 8:00-10:00 Slot
+                  </button>
+                </div>
+              </div>
 
               <form id="resource-booking-form" onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1">

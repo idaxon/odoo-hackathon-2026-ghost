@@ -31,6 +31,7 @@ export const api = {
     request(`/assets/${id}/transfer`, { method: 'PATCH', body: JSON.stringify({ employeeId, departmentId }) }),
   getBookings: () => request('/bookings'),
   createBooking: (data: any) => request('/bookings', { method: 'POST', body: JSON.stringify(data) }),
+  deleteBooking: (id: number) => request(`/bookings/${id}`, { method: 'DELETE' }),
   getMaintenanceRequests: () => request('/maintenance'),
   createMaintenanceRequest: (data: any) => request('/maintenance', { method: 'POST', body: JSON.stringify(data) }),
   resolveMaintenanceRequest: (id: number, data?: any) => request(`/maintenance/${id}/resolve`, { method: 'PATCH', body: data ? JSON.stringify(data) : undefined }),

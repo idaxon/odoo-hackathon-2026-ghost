@@ -275,6 +275,22 @@ app.post('/api/bookings', (req, res) => {
   }
 });
 
+// DELETE /api/bookings/:id
+app.delete('/api/bookings/:id', (req, res) => {
+  const { id } = req.params;
+  try {
+    const booking = db.prepare('SELECT * FROM bookings WHERE id = ?').get(id);
+    if (!booking) return res.status(404).json({ error: 'Booking not found.' });
+
+    db.prepare('DELETE FROM bookings WHERE id = ?').run(id);
+    logActivity(booking.booked_by, 'cancelled booking for', booking.resource_name);
+
+    res.json({ message: 'Booking cancelled successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // -------------------------------------------------------------
 // MAINTENANCE ENDPOINTS
 // -------------------------------------------------------------
