@@ -1,8 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Cpu, Smartphone, Monitor, HardDrive, Sparkles, AlertCircle, Wrench, Battery, X, User, CheckCircle2, MapPin } from 'lucide-react';
+import { ArrowLeft, Cpu, Smartphone, Monitor, HardDrive, Sparkles, AlertCircle, Wrench, Battery, X, User, CheckCircle2, MapPin, Send } from 'lucide-react';
 import { api } from '../api';
 import { QRCodeCanvas } from 'qrcode.react';
+
+interface ChatMessage {
+  sender: 'asset' | 'user';
+  text: string;
+  time: string;
+}
 
 interface TimelineStep {
   label: string;
@@ -54,6 +60,10 @@ interface AssetDetailData {
   timelineSteps: TimelineStep[];
   aiRecommendation: string;
   status: 'Available' | 'In Use' | 'Maintenance' | 'Retired';
+  purchase_cost: number;
+  vendor: string | null;
+  repair_cost: number;
+  replacement_cost: number;
 }
 
 export default function AssetDetail() {
@@ -66,7 +76,11 @@ export default function AssetDetail() {
   const [loading, setLoading] = useState(true);
   const [asset, setAsset] = useState<AssetDetailData | null>(null);
   const [qrOrigin, setQrOrigin] = useState(window.location.origin);
-  const [voiceText, setVoiceText] = useState<string>('');
+
+  // Interactive Chat States
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
 
   // Allocation Drawer State
   const [isAllocOpen, setIsAllocOpen] = useState(false);
@@ -106,8 +120,18 @@ export default function AssetDetail() {
       setLoading(true);
       const data = await api.getAssetById(assetId);
       setAsset(data);
+      
       const voiceRes = await api.getAssetVoice(assetId);
-      setVoiceText(voiceRes.voiceText || '');
+      const initialText = voiceRes.voiceText || `I'm ${data.name}. Ask me about my health score, financial value, or maintenance history!`;
+      
+      setChatMessages([
+        {
+          sender: 'asset',
+          text: initialText,
+          time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+
       const history = await api.getAssetScanHistory(assetId);
       setScanHistory(history || []);
     } catch (error) {
@@ -115,6 +139,59 @@ export default function AssetDetail() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const generateAssetReply = (userInput: string) => {
+    if (!asset) return 'Connecting...';
+    const input = userInput.toLowerCase();
+    
+    if (input.includes('problem') || input.includes('health') || input.includes('feel') || input.includes('status')) {
+      if (asset.health_score < 50) {
+        return `Honestly, my health score has dropped to ${asset.health_score}/100. I have needed repairs ${asset.repair_cost > 0 ? 'regularly' : 'recently'}, and I feel a bit worn down. I'd appreciate some checkups!`;
+      } else {
+        return `I'm feeling great! My health score is currently ${asset.health_score}/100. No critical errors or failure symptoms to report.`;
+      }
+    }
+    
+    if (input.includes('history') || input.includes('maintenance') || input.includes('service') || input.includes('timeline')) {
+      return `I was purchased on ${asset.purchase_date} from ${asset.vendor || 'direct partner'}. My last documented service check was on ${asset.last_maintenance_date || 'N/A'}. You can inspect my complete lifecycle timeline below.`;
+    }
+    
+    if (input.includes('financial') || input.includes('cost') || input.includes('replace') || input.includes('repair') || input.includes('value')) {
+      const bookValue = Math.round(asset.purchase_cost * (asset.health_score / 100));
+      if (asset.replacement_cost < asset.repair_cost) {
+        return `I cost ₹${asset.purchase_cost.toLocaleString()} initially. Replacing me costs ₹${asset.replacement_cost.toLocaleString()}, while fixing me would cost ₹${asset.repair_cost.toLocaleString()}. Replacing me makes more sense than repairing me again!`;
+      } else {
+        return `My current book value is estimated at ₹${bookValue.toLocaleString()}. Repairing me costs ₹${asset.repair_cost.toLocaleString()}, which is below my replacement cost of ₹${asset.replacement_cost.toLocaleString()}. I am still highly cost-effective to maintain!`;
+      }
+    }
+    
+    if (input.includes('allocate') || input.includes('where') || input.includes('owner') || input.includes('assigned') || input.includes('department')) {
+      if (asset.assigned_to_name) {
+        return `I am currently assigned to ${asset.assigned_to_name} in the ${asset.department_name} department. If you need to re-allocate or transfer me, please use the action button in the header.`;
+      } else {
+        return `I am currently available in storage. If your department needs me, click the 'Allocate / Transfer' action button at the top to check me out!`;
+      }
+    }
+    
+    return `Hello! I'm ${asset.name} (${asset.asset_code}), a ${asset.category} currently marked as ${asset.status}. Ask me about my health, maintenance history, or repair vs replacement costs!`;
+  };
+
+  const handleSendChatMessage = (text: string) => {
+    if (!text.trim()) return;
+    const time = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    
+    const userMsg = { sender: 'user' as const, text, time };
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatInput('');
+    setIsTyping(true);
+    
+    setTimeout(() => {
+      setIsTyping(false);
+      const replyText = generateAssetReply(text);
+      const replyMsg = { sender: 'asset' as const, text: replyText, time };
+      setChatMessages(prev => [...prev, replyMsg]);
+    }, 600);
   };
 
   const handleCheckInSubmit = async (e: React.FormEvent) => {
@@ -277,16 +354,112 @@ export default function AssetDetail() {
         </div>
       </div>
 
-      {/* Dynamic Asset Voice Bubble Panel */}
-      {voiceText && (
-        <div className="card-premium p-4 border-l-4 border-l-primary bg-white shadow-sm flex items-start gap-4 animate-appear">
-          <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-            {getCategoryIcon(asset.category)}
+      {/* Interactive Chat Panel with Asset */}
+      {asset && chatMessages.length > 0 && (
+        <div className="card-premium bg-white p-5 space-y-4 animate-appear border border-border-light shadow-sm">
+          {/* Header */}
+          <div className="flex items-center gap-2.5 border-b border-border-light pb-3">
+            <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+              {getCategoryIcon(asset.category)}
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-text flex items-center gap-1.5">
+                Chat with {asset.name} <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-ping"></span>
+              </h3>
+              <p className="text-[10px] text-text-muted font-medium uppercase tracking-wider">Interactive Digital Twin Voice Channel</p>
+            </div>
           </div>
-          <div className="space-y-1">
-            <p className="text-sm italic text-text leading-relaxed font-medium">"{voiceText}"</p>
-            <p className="text-[10px] uppercase font-bold tracking-wider text-text-muted">— {asset.name}</p>
+
+          {/* Messages Grid */}
+          <div className="space-y-3.5 max-h-64 overflow-y-auto p-2 bg-gray-50/30 rounded border border-border-light">
+            {chatMessages.map((msg, index) => (
+              <div 
+                key={index} 
+                className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div 
+                  className={`max-w-[75%] rounded p-3 text-xs leading-relaxed space-y-1 ${
+                    msg.sender === 'user' 
+                      ? 'bg-primary text-white font-medium shadow-sm' 
+                      : 'bg-white border border-border-light text-text shadow-sm'
+                  }`}
+                >
+                  <p className={msg.sender === 'asset' ? 'italic' : ''}>{msg.text}</p>
+                  <span className={`text-[9px] block text-right mt-1 ${
+                    msg.sender === 'user' ? 'text-white/60' : 'text-text-muted'
+                  }`}>
+                    {msg.time}
+                  </span>
+                </div>
+              </div>
+            ))}
+
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="bg-white border border-border-light rounded px-3 py-2 text-xs text-text-muted italic flex items-center gap-1.5 shadow-sm">
+                  <span className="w-1 h-1 bg-text-muted rounded-full animate-bounce"></span>
+                  <span className="w-1 h-1 bg-text-muted rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                  <span className="w-1 h-1 bg-text-muted rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                  <span>{asset.name} is typing...</span>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Quick Questions Prompts */}
+          <div className="space-y-1.5">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-text-muted block">Quick Questions:</span>
+            <div className="flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleSendChatMessage("How are you feeling / are there any problems?")}
+                className="btn-secondary py-1.5 px-2.5 text-[10px] bg-gray-50 border-border-light text-text hover:bg-gray-100 font-bold transition-all cursor-pointer"
+              >
+                🩺 Diagnoses & Problems?
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendChatMessage("Tell me about your maintenance history.")}
+                className="btn-secondary py-1.5 px-2.5 text-[10px] bg-gray-50 border-border-light text-text hover:bg-gray-100 font-bold transition-all cursor-pointer"
+              >
+                📅 Service & Timeline?
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendChatMessage("What is your cost status (repair vs replace)?")}
+                className="btn-secondary py-1.5 px-2.5 text-[10px] bg-gray-50 border-border-light text-text hover:bg-gray-100 font-bold transition-all cursor-pointer"
+              >
+                💰 Cost vs Depreciation?
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSendChatMessage("Where are you currently allocated?")}
+                className="btn-secondary py-1.5 px-2.5 text-[10px] bg-gray-50 border-border-light text-text hover:bg-gray-100 font-bold transition-all cursor-pointer"
+              >
+                🏢 Department & Owner?
+              </button>
+            </div>
+          </div>
+
+          {/* Chat Input form */}
+          <form 
+            onSubmit={(e) => { e.preventDefault(); handleSendChatMessage(chatInput); }}
+            className="flex gap-2"
+          >
+            <input
+              type="text"
+              placeholder={`Ask ${asset.name} a question...`}
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              className="input-premium flex-1 text-xs"
+            />
+            <button
+              type="submit"
+              className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1 cursor-pointer"
+            >
+              <Send size={12} /> Send
+            </button>
+          </form>
         </div>
       )}
 
