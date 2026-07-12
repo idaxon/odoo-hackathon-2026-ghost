@@ -414,7 +414,7 @@ export default function Assets() {
                   <div className="bg-white p-6 border border-border-light rounded-lg shadow-sm flex flex-col items-center justify-center space-y-4">
                     <QRCodeCanvas
                       id="qr-code-canvas"
-                      value={registeredAsset.id}
+                      value={`${window.location.origin}/assets/${registeredAsset.id}`}
                       size={160}
                       level="H"
                       includeMargin={true}
