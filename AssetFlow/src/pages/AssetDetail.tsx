@@ -46,6 +46,12 @@ export default function AssetDetail() {
   const [selectedDeptId, setSelectedDeptId] = useState(3);
   const [isTransferMode, setIsTransferMode] = useState(false);
 
+  // Public Report Issue Drawer State
+  const [isReportOpen, setIsReportOpen] = useState(false);
+  const [reportName, setReportName] = useState('Public Reporter');
+  const [reportPriority, setReportPriority] = useState<'Low' | 'Medium' | 'High' | 'Critical'>('Medium');
+  const [reportDescription, setReportDescription] = useState('');
+
   // Seeded database reference mappings (CORS safe database IDs)
   const employees = [
     { id: 1, name: 'Sarah Connor' },
@@ -114,6 +120,28 @@ export default function AssetDetail() {
     }
   };
 
+  const handleReportIssue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!asset) return;
+
+    try {
+      await api.createMaintenanceRequest({
+        asset_id: asset.id,
+        raised_by: reportName,
+        priority: reportPriority,
+        description: reportDescription
+      });
+      setIsReportOpen(false);
+      setReportDescription('');
+      setReportName('Public Reporter');
+      if (id) {
+        loadAssetDetail(id); // Reload updated asset condition
+      }
+    } catch (err) {
+      console.error('Failed to submit maintenance request:', err);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6 max-w-5xl">
@@ -163,24 +191,37 @@ export default function AssetDetail() {
     <div className="space-y-6 max-w-5xl relative font-sans">
       {/* Back navigation & Action bar */}
       <div className="flex items-center justify-between">
+        {/* Desktop-only back navigation */}
         <button 
           onClick={() => navigate('/assets')}
-          className="btn-secondary text-primary border-border-light hover:bg-gray-50 flex items-center gap-2 py-1.5 px-3 text-xs"
+          className="hidden lg:flex btn-secondary text-primary border-border-light hover:bg-gray-50 items-center gap-2 py-1.5 px-3 text-xs font-semibold"
         >
           <ArrowLeft size={14} /> Back to Assets
         </button>
 
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-xs font-semibold text-text-muted hidden sm:inline">Node: {asset.asset_code}</span>
-          <button 
-            onClick={() => {
-              setIsTransferMode(false);
-              setIsAllocOpen(true);
-            }}
-            className="btn-primary py-1.5 px-4 text-xs font-semibold"
-          >
-            Allocate / Transfer Asset
-          </button>
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3 w-full lg:w-auto justify-between lg:justify-end">
+          <span className="font-mono text-xs font-semibold text-text-muted">Node: {asset.asset_code}</span>
+          <div className="flex items-center gap-2">
+            {/* Desktop-only Admin Allocate Button */}
+            <button 
+              onClick={() => {
+                setIsTransferMode(false);
+                setIsAllocOpen(true);
+              }}
+              className="hidden lg:block btn-primary py-1.5 px-4 text-xs font-semibold"
+            >
+              Allocate / Transfer Asset
+            </button>
+            
+            {/* Public/Mobile Report Issue Button (Shown everywhere, prominent on mobile) */}
+            <button 
+              onClick={() => setIsReportOpen(true)}
+              className="btn-secondary text-red-600 border-red-200 hover:bg-red-50 py-1.5 px-4 text-xs font-semibold flex items-center gap-1.5 shadow-sm"
+            >
+              <Wrench size={13} /> Report Issue
+            </button>
+          </div>
         </div>
       </div>
 
@@ -252,7 +293,7 @@ export default function AssetDetail() {
                     document.body.removeChild(downloadLink);
                   }
                 }}
-                className="btn-secondary py-1 px-2.5 text-[10px] mt-2 font-semibold flex items-center gap-1.5 bg-gray-50 border-border-light hover:bg-gray-100"
+                className="hidden lg:flex btn-secondary py-1 px-2.5 text-[10px] mt-2 font-semibold items-center gap-1.5 bg-gray-50 border-border-light hover:bg-gray-100"
               >
                 Download QR Code
               </button>
@@ -481,6 +522,95 @@ export default function AssetDetail() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+      {/* Public Report Issue Side Drawer Panel */}
+      {isReportOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop overlay */}
+          <div 
+            className="absolute inset-0 bg-black/30 transition-opacity" 
+            onClick={() => setIsReportOpen(false)}
+          ></div>
+
+          {/* Drawer Body */}
+          <div className="relative w-full max-w-md bg-surface shadow-xl h-full flex flex-col justify-between border-l border-border-light z-10 animate-slide-in">
+            {/* Header */}
+            <div className="h-16 border-b border-border-light flex items-center justify-between px-6 bg-gray-50/50">
+              <h3 className="font-bold text-text text-base">Report Hardware Issue</h3>
+              <button 
+                onClick={() => setIsReportOpen(false)} 
+                className="text-text-muted hover:text-text p-1.5 rounded hover:bg-gray-100 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Scrollable Form */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <form id="public-report-form" onSubmit={handleReportIssue} className="space-y-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-text-muted">Reporter Name *</label>
+                  <input 
+                    type="text" 
+                    required 
+                    className="input-premium w-full text-sm" 
+                    value={reportName}
+                    onChange={(e) => setReportName(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-text-muted">Issue Severity / Priority *</label>
+                  <select 
+                    className="input-premium w-full text-sm"
+                    value={reportPriority}
+                    onChange={(e) => setReportPriority(e.target.value as any)}
+                  >
+                    <option value="Low">Low Priority</option>
+                    <option value="Medium">Medium Priority</option>
+                    <option value="High">High Priority</option>
+                    <option value="Critical">Critical Failure</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-text-muted">Description of Issue *</label>
+                  <textarea 
+                    required 
+                    rows={4}
+                    className="input-premium w-full text-sm" 
+                    placeholder="Explain what is failing, compressor noise, screen flicker, leak, etc..."
+                    value={reportDescription}
+                    onChange={(e) => setReportDescription(e.target.value)}
+                  />
+                </div>
+
+                <div className="p-3 bg-red-50 border border-red-100 rounded text-[11px] text-red-700 flex items-start gap-1.5 leading-relaxed">
+                  <AlertCircle size={14} className="flex-shrink-0 mt-0.5" />
+                  <span>On submit, this request is immediately recorded, and this asset's status tag will update to <strong>Maintenance</strong>.</span>
+                </div>
+              </form>
+            </div>
+
+            {/* Footer containing action buttons */}
+            <div className="h-16 border-t border-border-light flex items-center justify-end px-6 gap-2 bg-gray-50/50">
+              <button 
+                type="button" 
+                onClick={() => setIsReportOpen(false)} 
+                className="btn-secondary py-1.5 px-4 text-xs font-medium"
+              >
+                Cancel
+              </button>
+              <button 
+                type="submit" 
+                form="public-report-form" 
+                className="btn-primary py-1.5 px-4 text-xs font-semibold"
+              >
+                Submit Report
+              </button>
+            </div>
           </div>
         </div>
       )}
