@@ -1,7 +1,7 @@
-import { Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Sparkles, Clock, Activity } from 'lucide-react';
 
 export default function Dashboard() {
-  // Format today's date dynamically
   const todayStr = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -35,6 +35,24 @@ export default function Dashboard() {
       borderClass: 'border-l-4 border-secondary bg-secondary/5'
     }
   ];
+
+  // Dynamic activity logs synced with LocalStorage
+  const [activityLogs, setActivityLogs] = useState<string[]>([]);
+
+  useEffect(() => {
+    const savedLogs = localStorage.getItem('assetflow_activity_log');
+    if (savedLogs) {
+      setActivityLogs(JSON.parse(savedLogs));
+    } else {
+      const defaults = [
+        "Daksh registered Printer P17 — 09:15 AM",
+        "System marked Server Rack B4 for Maintenance — 10:20 AM",
+        "Jane Austen returned Dell UltraSharp 32\" Monitor — 10:45 AM"
+      ];
+      localStorage.setItem('assetflow_activity_log', JSON.stringify(defaults));
+      setActivityLogs(defaults);
+    }
+  }, []);
 
   const stats = [
     { label: 'Total Assets', value: '1,482' },
@@ -100,6 +118,31 @@ export default function Dashboard() {
               <span className="text-xs text-text-muted font-medium mt-1 truncate">{stat.label}</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Activity Log Feed Section */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 border-b border-border-light pb-2">
+          <Activity size={16} className="text-secondary" />
+          <h3 className="text-sm font-semibold text-text uppercase tracking-wider m-0">Recent Activity Feed</h3>
+        </div>
+        <div className="card-premium p-5 bg-white">
+          <div className="divide-y divide-border-light">
+            {activityLogs.slice(0).reverse().map((log, idx) => (
+              <div key={idx} className="py-3 flex items-center justify-between first:pt-0 last:pb-0 text-sm text-text">
+                <span className="font-medium text-text">{log.split(' — ')[0]}</span>
+                <span className="text-xs text-text-muted font-mono flex items-center gap-1">
+                  <Clock size={12} /> {log.split(' — ')[1]}
+                </span>
+              </div>
+            ))}
+            {activityLogs.length === 0 && (
+              <div className="py-2 text-center text-text-muted text-sm">
+                No recent activity logged.
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

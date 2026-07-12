@@ -14,18 +14,23 @@ interface Asset {
 
 export default function Assets() {
   const navigate = useNavigate();
-  // 9 Initial Mock Rows
-  const [assets, setAssets] = useState<Asset[]>([
-    { id: 'AF-0001', name: 'MacBook Pro 16" (M3 Max)', category: 'Workstation', department: 'Engineering', status: 'In Use', healthScore: 94 },
-    { id: 'AF-0002', name: 'Dell UltraSharp 32" 4K Monitor', category: 'Monitor', department: 'Design', status: 'Available', healthScore: 98 },
-    { id: 'AF-0003', name: 'iPhone 15 Pro Max 256GB', category: 'Mobile', department: 'Marketing', status: 'In Use', healthScore: 89 },
-    { id: 'AF-0004', name: 'Supermicro 2U Database Server', category: 'Server', department: 'Infrastructure', status: 'Maintenance', healthScore: 42 },
-    { id: 'AF-0005', name: 'Sony WH-1000XM5 Headset', category: 'Accessories', department: 'HR', status: 'Available', healthScore: 100 },
-    { id: 'AF-0006', name: 'Herman Miller Aeron Chair', category: 'Furniture', department: 'Operations', status: 'In Use', healthScore: 91 },
-    { id: 'AF-0007', name: 'iPad Pro 12.9" (M2)', category: 'Tablet', department: 'Sales', status: 'Available', healthScore: 87 },
-    { id: 'AF-0008', name: 'Cisco Catalyst 9300 Switch', category: 'Networking', department: 'Infrastructure', status: 'In Use', healthScore: 78 },
-    { id: 'AF-0009', name: 'ThinkPad X1 Carbon Gen 11', category: 'Workstation', department: 'Finance', status: 'Retired', healthScore: 35 }
-  ]);
+  const [assets, setAssets] = useState<Asset[]>(() => {
+    const saved = localStorage.getItem('assetflow_assets');
+    if (saved) return JSON.parse(saved);
+    const defaults: Asset[] = [
+      { id: 'AF-0001', name: 'MacBook Pro 16" (M3 Max)', category: 'Workstation', department: 'Engineering', status: 'In Use', healthScore: 94 },
+      { id: 'AF-0002', name: 'Dell UltraSharp 32" 4K Monitor', category: 'Monitor', department: 'Design', status: 'Available', healthScore: 98 },
+      { id: 'AF-0003', name: 'iPhone 15 Pro Max 256GB', category: 'Mobile', department: 'Marketing', status: 'In Use', healthScore: 89 },
+      { id: 'AF-0004', name: 'Supermicro 2U Database Server', category: 'Server', department: 'Infrastructure', status: 'Maintenance', healthScore: 42 },
+      { id: 'AF-0005', name: 'Sony WH-1000XM5 Headset', category: 'Accessories', department: 'HR', status: 'Available', healthScore: 100 },
+      { id: 'AF-0006', name: 'Herman Miller Aeron Chair', category: 'Furniture', department: 'Operations', status: 'In Use', healthScore: 91 },
+      { id: 'AF-0007', name: 'iPad Pro 12.9" (M2)', category: 'Tablet', department: 'Sales', status: 'Available', healthScore: 87 },
+      { id: 'AF-0008', name: 'Cisco Catalyst 9300 Switch', category: 'Networking', department: 'Infrastructure', status: 'In Use', healthScore: 78 },
+      { id: 'AF-0009', name: 'ThinkPad X1 Carbon Gen 11', category: 'Workstation', department: 'Finance', status: 'Retired', healthScore: 35 }
+    ];
+    localStorage.setItem('assetflow_assets', JSON.stringify(defaults));
+    return defaults;
+  });
 
   const [searchTerm, setSearchTerm] = useState('');
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -103,8 +108,18 @@ export default function Assets() {
       healthScore: 100 // default for new asset
     };
 
-    setAssets([...assets, newAsset]);
+    const updated = [...assets, newAsset];
+    setAssets(updated);
+    localStorage.setItem('assetflow_assets', JSON.stringify(updated));
     setRegisteredAsset(newAsset);
+
+    // Write action to shared activity log
+    const savedLogs = localStorage.getItem('assetflow_activity_log');
+    const logs = savedLogs ? JSON.parse(savedLogs) : [];
+    const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const logMsg = `Daksh registered ${newAsset.name} — ${timeStr}`;
+    const newLogs = [...logs, logMsg];
+    localStorage.setItem('assetflow_activity_log', JSON.stringify(newLogs));
   };
 
   const downloadQR = (assetId: string) => {
