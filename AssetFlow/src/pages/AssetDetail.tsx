@@ -76,11 +76,13 @@ export default function AssetDetail() {
   const [loading, setLoading] = useState(true);
   const [asset, setAsset] = useState<AssetDetailData | null>(null);
   const [qrOrigin, setQrOrigin] = useState(window.location.origin);
+  const [voiceText, setVoiceText] = useState<string>('');
 
   // Interactive Chat States
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
 
   // Allocation Drawer State
   const [isAllocOpen, setIsAllocOpen] = useState(false);
@@ -123,6 +125,7 @@ export default function AssetDetail() {
       
       const voiceRes = await api.getAssetVoice(assetId);
       const initialText = voiceRes.voiceText || `I'm ${data.name}. Ask me about my health score, financial value, or maintenance history!`;
+      setVoiceText(initialText);
       
       setChatMessages([
         {
@@ -354,112 +357,157 @@ export default function AssetDetail() {
         </div>
       </div>
 
-      {/* Interactive Chat Panel with Asset */}
-      {asset && chatMessages.length > 0 && (
-        <div className="card-premium bg-white p-5 space-y-4 animate-appear border border-border-light shadow-sm">
-          {/* Header */}
-          <div className="flex items-center gap-2.5 border-b border-border-light pb-3">
-            <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+      {/* Dynamic Asset Voice Line Summary Banner */}
+      {asset && voiceText && (
+        <div className="card-premium p-4 border-l-4 border-l-primary bg-white shadow-sm flex items-center justify-between gap-4 animate-appear">
+          <div className="flex items-center gap-3 overflow-hidden">
+            <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
               {getCategoryIcon(asset.category)}
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-text flex items-center gap-1.5">
-                Chat with {asset.name} <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-ping"></span>
-              </h3>
-              <p className="text-[10px] text-text-muted font-medium uppercase tracking-wider">Interactive Digital Twin Voice Channel</p>
+            <div className="space-y-0.5 min-w-0">
+              <p className="text-xs font-semibold text-text truncate">
+                <span className="italic">"{voiceText}"</span>
+              </p>
+              <p className="text-[9px] uppercase font-bold tracking-wider text-text-muted">— {asset.name}</p>
             </div>
           </div>
-
-          {/* Messages Grid */}
-          <div className="space-y-3.5 max-h-64 overflow-y-auto p-2 bg-gray-50/30 rounded border border-border-light">
-            {chatMessages.map((msg, index) => (
-              <div 
-                key={index} 
-                className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div 
-                  className={`max-w-[75%] rounded p-3 text-xs leading-relaxed space-y-1 ${
-                    msg.sender === 'user' 
-                      ? 'bg-primary text-white font-medium shadow-sm' 
-                      : 'bg-white border border-border-light text-text shadow-sm'
-                  }`}
-                >
-                  <p className={msg.sender === 'asset' ? 'italic' : ''}>{msg.text}</p>
-                  <span className={`text-[9px] block text-right mt-1 ${
-                    msg.sender === 'user' ? 'text-white/60' : 'text-text-muted'
-                  }`}>
-                    {msg.time}
-                  </span>
-                </div>
-              </div>
-            ))}
-
-            {isTyping && (
-              <div className="flex justify-start">
-                <div className="bg-white border border-border-light rounded px-3 py-2 text-xs text-text-muted italic flex items-center gap-1.5 shadow-sm">
-                  <span className="w-1 h-1 bg-text-muted rounded-full animate-bounce"></span>
-                  <span className="w-1 h-1 bg-text-muted rounded-full animate-bounce [animation-delay:0.2s]"></span>
-                  <span className="w-1 h-1 bg-text-muted rounded-full animate-bounce [animation-delay:0.4s]"></span>
-                  <span>{asset.name} is typing...</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Quick Questions Prompts */}
-          <div className="space-y-1.5">
-            <span className="text-[9px] font-bold uppercase tracking-wider text-text-muted block">Quick Questions:</span>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                type="button"
-                onClick={() => handleSendChatMessage("How are you feeling / are there any problems?")}
-                className="btn-secondary py-1.5 px-2.5 text-[10px] bg-gray-50 border-border-light text-text hover:bg-gray-100 font-bold transition-all cursor-pointer"
-              >
-                🩺 Diagnoses & Problems?
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSendChatMessage("Tell me about your maintenance history.")}
-                className="btn-secondary py-1.5 px-2.5 text-[10px] bg-gray-50 border-border-light text-text hover:bg-gray-100 font-bold transition-all cursor-pointer"
-              >
-                📅 Service & Timeline?
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSendChatMessage("What is your cost status (repair vs replace)?")}
-                className="btn-secondary py-1.5 px-2.5 text-[10px] bg-gray-50 border-border-light text-text hover:bg-gray-100 font-bold transition-all cursor-pointer"
-              >
-                💰 Cost vs Depreciation?
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSendChatMessage("Where are you currently allocated?")}
-                className="btn-secondary py-1.5 px-2.5 text-[10px] bg-gray-50 border-border-light text-text hover:bg-gray-100 font-bold transition-all cursor-pointer"
-              >
-                🏢 Department & Owner?
-              </button>
-            </div>
-          </div>
-
-          {/* Chat Input form */}
-          <form 
-            onSubmit={(e) => { e.preventDefault(); handleSendChatMessage(chatInput); }}
-            className="flex gap-2"
+          <button
+            type="button"
+            onClick={() => setIsChatDrawerOpen(true)}
+            className="btn-secondary py-1.5 px-3.5 text-[10px] text-primary border-primary/25 hover:bg-primary/5 font-extrabold transition-all flex items-center gap-1 cursor-pointer flex-shrink-0 shadow-sm"
           >
-            <input
-              type="text"
-              placeholder={`Ask ${asset.name} a question...`}
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              className="input-premium flex-1 text-xs"
-            />
-            <button
-              type="submit"
-              className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1 cursor-pointer"
-            >
-              <Send size={12} /> Send
-            </button>
-          </form>
+            <Sparkles size={11} /> Chat with Asset
+          </button>
+        </div>
+      )}
+
+      {/* Interactive Chat Side Drawer Panel */}
+      {isChatDrawerOpen && asset && chatMessages.length > 0 && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop overlay */}
+          <div 
+            className="absolute inset-0 bg-black/35 transition-opacity" 
+            onClick={() => setIsChatDrawerOpen(false)}
+          ></div>
+
+          {/* Drawer Container */}
+          <div className="relative w-full max-w-md bg-surface shadow-xl h-full flex flex-col justify-between border-l border-border-light z-10 animate-slide-in font-sans">
+            {/* Header */}
+            <div className="h-16 border-b border-border-light flex items-center justify-between px-6 bg-gray-50/50">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                  {getCategoryIcon(asset.category)}
+                </div>
+                <div>
+                  <h3 className="font-bold text-text text-sm flex items-center gap-1.5">
+                    Chat with {asset.name}
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-ping"></span>
+                  </h3>
+                  <p className="text-[10px] text-text-muted font-semibold uppercase tracking-wider">Digital Twin voice feedback</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsChatDrawerOpen(false)} 
+                className="text-text-muted hover:text-text p-1.5 rounded hover:bg-gray-100 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Messages Feed */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50/20">
+              {chatMessages.map((msg, index) => (
+                <div 
+                  key={index} 
+                  className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div 
+                    className={`max-w-[80%] rounded p-3 text-xs leading-relaxed space-y-1 ${
+                      msg.sender === 'user' 
+                        ? 'bg-primary text-white font-medium shadow-sm' 
+                        : 'bg-white border border-border-light text-text shadow-sm'
+                    }`}
+                  >
+                    <p className={msg.sender === 'asset' ? 'italic' : ''}>{msg.text}</p>
+                    <span className={`text-[9px] block text-right mt-1 ${
+                      msg.sender === 'user' ? 'text-white/60' : 'text-text-muted'
+                    }`}>
+                      {msg.time}
+                    </span>
+                  </div>
+                </div>
+              ))}
+
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-white border border-border-light rounded px-3 py-2 text-xs text-text-muted italic flex items-center gap-1.5 shadow-sm">
+                    <span className="w-1 h-1 bg-text-muted rounded-full animate-bounce"></span>
+                    <span className="w-1 h-1 bg-text-muted rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                    <span className="w-1 h-1 bg-text-muted rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                    <span>Asset is compiling reply...</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Prompts & Chat Input Area */}
+            <div className="p-5 border-t border-border-light bg-surface space-y-4">
+              {/* Quick Questions Prompts */}
+              <div className="space-y-1.5">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-text-muted block">Demo Presets:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleSendChatMessage("How are you feeling / are there any problems?")}
+                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm animate-appear"
+                  >
+                    🩺 Diagnostics & Problems?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSendChatMessage("Tell me about your maintenance history.")}
+                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm animate-appear"
+                  >
+                    📅 Service History?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSendChatMessage("What is your cost status (repair vs replace)?")}
+                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm animate-appear"
+                  >
+                    💰 Repair vs Replace Cost?
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSendChatMessage("Where are you currently allocated?")}
+                    className="bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-2.5 rounded text-[10px] font-bold transition-all cursor-pointer shadow-sm animate-appear"
+                  >
+                    🏢 Department & Owner?
+                  </button>
+                </div>
+              </div>
+
+              {/* Input bar */}
+              <form 
+                onSubmit={(e) => { e.preventDefault(); handleSendChatMessage(chatInput); }}
+                className="flex gap-2"
+              >
+                <input
+                  type="text"
+                  placeholder={`Ask ${asset.name} a question...`}
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  className="input-premium flex-1 text-xs"
+                />
+                <button
+                  type="submit"
+                  className="btn-primary py-1.5 px-4 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Send size={12} /> Send
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
       )}
 
