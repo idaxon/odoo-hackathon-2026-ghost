@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Cpu, Smartphone, Monitor, HardDrive, Sparkles, AlertCircle, Wrench, Battery, X, User, CheckCircle2 } from 'lucide-react';
+import { api } from '../api';
 
 interface TimelineStep {
   label: string;
@@ -9,19 +10,21 @@ interface TimelineStep {
 }
 
 interface AssetDetailData {
-  id: string;
+  id: number;
+  asset_code: string;
   name: string;
   category: string;
-  department: string;
-  owner: string;
-  purchaseDate: string;
-  serialNumber: string;
-  warrantyStatus: 'Active' | 'Expired';
-  healthScore: number;
-  riskLevel: 'Low' | 'Medium' | 'High';
+  department_name: string;
+  assigned_to_name: string | null;
+  assigned_to: number | null;
+  purchase_date: string;
+  serial_number: string;
+  warranty_expiry: string;
+  health_score: number;
+  risk_level: 'Low' | 'Medium' | 'High';
   condition: 'Excellent' | 'Good' | 'Fair' | 'Poor';
-  batteryPercentage?: number;
-  lastMaintenanceDays: number;
+  battery_pct?: number;
+  last_maintenance_date: string;
   timelineSteps: TimelineStep[];
   aiRecommendation: string;
   status: 'Available' | 'In Use' | 'Maintenance' | 'Retired';
@@ -31,362 +34,104 @@ export default function AssetDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  // Allocation Drawer State
-  const [isAllocOpen, setIsAllocOpen] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState('Sarah Connor');
-  const [selectedDept, setSelectedDept] = useState('Engineering');
-  const [isTransferMode, setIsTransferMode] = useState(false);
-
-  // Loaded Asset details
+  // Load States
+  const [loading, setLoading] = useState(true);
   const [asset, setAsset] = useState<AssetDetailData | null>(null);
 
-  const employees = ['Sarah Connor', 'John Doe', 'Alex Mercer', 'Elena Rostova', 'Michael Scott', 'Jane Austen'];
-  const departments = ['Engineering', 'Design', 'Marketing', 'Infrastructure', 'HR', 'Operations', 'Sales', 'Finance'];
+  // Allocation Drawer State
+  const [isAllocOpen, setIsAllocOpen] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState(1);
+  const [selectedDeptId, setSelectedDeptId] = useState(3);
+  const [isTransferMode, setIsTransferMode] = useState(false);
 
-  // Base list of detailed mock database matching standard inventory
-  const baseDb: Record<string, AssetDetailData> = {
-    'AF-0001': {
-      id: 'AF-0001',
-      name: 'MacBook Pro 16" (M3 Max)',
-      category: 'Workstation',
-      department: 'Engineering',
-      owner: 'Sarah Connor',
-      purchaseDate: '2025-10-15',
-      serialNumber: 'C02F12X0Q05D',
-      warrantyStatus: 'Active',
-      healthScore: 94,
-      riskLevel: 'Low',
-      condition: 'Excellent',
-      batteryPercentage: 92,
-      lastMaintenanceDays: 12,
-      timelineSteps: [
-        { label: 'Purchased', date: 'Oct 15, 2025', desc: 'Acquired through Apple Enterprise Store.' },
-        { label: 'Allocated', date: 'Oct 18, 2025', desc: 'Assigned as primary device to Sarah Connor.' },
-        { label: 'Maintenance', date: 'Jun 30, 2026', desc: 'Routine diagnostic and system cleanup audit.' },
-        { label: 'Current', date: 'Jul 12, 2026', desc: 'Device in active operation, health score optimal.' }
-      ],
-      aiRecommendation: 'Battery health and storage are optimal. No action required.',
-      status: 'In Use'
-    },
-    'AF-0002': {
-      id: 'AF-0002',
-      name: 'Dell UltraSharp 32" 4K Monitor',
-      category: 'Monitor',
-      department: 'Design',
-      owner: 'Unassigned',
-      purchaseDate: '2024-03-12',
-      serialNumber: 'CN-0P826D-74443',
-      warrantyStatus: 'Expired',
-      healthScore: 98,
-      riskLevel: 'Low',
-      condition: 'Good',
-      lastMaintenanceDays: 180,
-      timelineSteps: [
-        { label: 'Purchased', date: 'Mar 12, 2024', desc: 'Acquired through Dell Corporate Portal.' },
-        { label: 'Allocated', date: 'Mar 15, 2024', desc: 'Deployed to Design Studio Lab.' },
-        { label: 'Maintenance', date: 'Jan 12, 2026', desc: 'Color profile recalibrated by hardware team.' },
-        { label: 'Current', date: 'Jul 12, 2026', desc: 'Device in active storage inventory, fully functional.' }
-      ],
-      aiRecommendation: 'Warranty expired. Consider extending support plan or budgeting for replacement cycle.',
-      status: 'Available'
-    },
-    'AF-0003': {
-      id: 'AF-0003',
-      name: 'iPhone 15 Pro Max 256GB',
-      category: 'Mobile',
-      department: 'Marketing',
-      owner: 'John Doe',
-      purchaseDate: '2025-09-22',
-      serialNumber: 'G03K4829G902',
-      warrantyStatus: 'Active',
-      healthScore: 89,
-      riskLevel: 'Low',
-      condition: 'Good',
-      batteryPercentage: 84,
-      lastMaintenanceDays: 45,
-      timelineSteps: [
-        { label: 'Purchased', date: 'Sep 22, 2025', desc: 'Acquired via carrier business plan.' },
-        { label: 'Allocated', date: 'Sep 24, 2025', desc: 'Provisioned to John Doe.' },
-        { label: 'Maintenance', date: 'May 28, 2026', desc: 'Glass protector replaced, external audit done.' },
-        { label: 'Current', date: 'Jul 12, 2026', desc: 'Device in active operation, battery displaying aging signs.' }
-      ],
-      aiRecommendation: 'Battery capacity currently at 84%. Schedule replacement within 6 months to maintain peak performance.',
-      status: 'In Use'
-    },
-    'AF-0004': {
-      id: 'AF-0004',
-      name: 'Supermicro 2U Database Server',
-      category: 'Server',
-      department: 'Infrastructure',
-      owner: 'Infrastructure Team',
-      purchaseDate: '2023-05-18',
-      serialNumber: 'SM-82910398',
-      warrantyStatus: 'Expired',
-      healthScore: 42,
-      riskLevel: 'High',
-      condition: 'Fair',
-      lastMaintenanceDays: 4,
-      timelineSteps: [
-        { label: 'Purchased', date: 'May 18, 2023', desc: 'Procured for database scaling project.' },
-        { label: 'Allocated', date: 'May 20, 2023', desc: 'Mounted in Data Center 1, Rack B4.' },
-        { label: 'Maintenance', date: 'Jul 08, 2026', desc: 'Emergency dispatch: replaced failed cooling fan unit 3.' },
-        { label: 'Current', date: 'Jul 12, 2026', desc: 'Server back online but secondary thermal sensors report elevated levels.' }
-      ],
-      aiRecommendation: 'Critical: System thermal levels are elevated due to fan speeds. Deploy technician for onsite air-flow audit.',
-      status: 'Maintenance'
-    },
-    'AF-0005': {
-      id: 'AF-0005',
-      name: 'Sony WH-1000XM5 Headset',
-      category: 'Accessories',
-      department: 'HR',
-      owner: 'Unassigned',
-      purchaseDate: '2025-12-05',
-      serialNumber: 'SN-SONY-X5918',
-      warrantyStatus: 'Active',
-      healthScore: 100,
-      riskLevel: 'Low',
-      condition: 'Excellent',
-      batteryPercentage: 99,
-      lastMaintenanceDays: 220,
-      timelineSteps: [
-        { label: 'Purchased', date: 'Dec 05, 2025', desc: 'Purchased as part of standard onboarding gear.' },
-        { label: 'Allocated', date: 'Dec 10, 2025', desc: 'Stored in HR inventory vault.' },
-        { label: 'Maintenance', date: 'Dec 10, 2025', desc: 'Firmware updated to v1.2 during onboarding pre-load.' },
-        { label: 'Current', date: 'Jul 12, 2026', desc: 'Device in storage, pristine condition.' }
-      ],
-      aiRecommendation: 'Device health pristine. Ready for allocation to next team onboarding.',
-      status: 'Available'
-    },
-    'AF-0006': {
-      id: 'AF-0006',
-      name: 'Herman Miller Aeron Chair',
-      category: 'Furniture',
-      department: 'Operations',
-      owner: 'Operations Team',
-      purchaseDate: '2022-01-20',
-      serialNumber: 'SN-HM-AERON-829',
-      warrantyStatus: 'Active',
-      healthScore: 91,
-      riskLevel: 'Low',
-      condition: 'Good',
-      lastMaintenanceDays: 320,
-      timelineSteps: [
-        { label: 'Purchased', date: 'Jan 20, 2022', desc: 'Acquired with 12-year manufacturer warranty.' },
-        { label: 'Allocated', date: 'Jan 25, 2022', desc: 'Placed in executive conference hall.' },
-        { label: 'Maintenance', date: 'Aug 14, 2025', desc: 'Tightened armrest bolts and mesh integrity check.' },
-        { label: 'Current', date: 'Jul 12, 2026', desc: 'Aeron chair structurally sound, mesh showing normal wear.' }
-      ],
-      aiRecommendation: 'Warranty active until 2034. Frame audit scheduled for late next fiscal year.',
-      status: 'In Use'
-    },
-    'AF-0007': {
-      id: 'AF-0007',
-      name: 'iPad Pro 12.9" (M2)',
-      category: 'Tablet',
-      department: 'Sales',
-      owner: 'Jane Austen',
-      purchaseDate: '2024-08-11',
-      serialNumber: 'DLX29103810',
-      warrantyStatus: 'Active',
-      healthScore: 87,
-      riskLevel: 'Low',
-      condition: 'Good',
-      batteryPercentage: 81,
-      lastMaintenanceDays: 90,
-      timelineSteps: [
-        { label: 'Purchased', date: 'Aug 11, 2024', desc: 'Acquired for mobile sales representatives.' },
-        { label: 'Allocated', date: 'Aug 15, 2024', desc: 'Assigned to Jane Austen.' },
-        { label: 'Maintenance', date: 'Apr 13, 2026', desc: 'OS reinstalled and diagnostic scan run.' },
-        { label: 'Current', date: 'Jul 12, 2026', desc: 'Operational, screen calibration and touch responsive.' }
-      ],
-      aiRecommendation: 'Lithium battery health is stable but watch for discharge times under sales team heavy-travel usage.',
-      status: 'Available'
-    },
-    'AF-0008': {
-      id: 'AF-0008',
-      name: 'Cisco Catalyst 9300 Switch',
-      category: 'Networking',
-      department: 'Infrastructure',
-      owner: 'Infrastructure Team',
-      purchaseDate: '2023-11-04',
-      serialNumber: 'SN-CSCO-9300-889',
-      warrantyStatus: 'Active',
-      healthScore: 78,
-      riskLevel: 'Medium',
-      condition: 'Good',
-      lastMaintenanceDays: 140,
-      timelineSteps: [
-        { label: 'Purchased', date: 'Nov 04, 2023', desc: 'Purchased as part of Floor 2 network stack overhaul.' },
-        { label: 'Allocated', date: 'Nov 12, 2023', desc: 'Rack-mounted and configured with primary network profiles.' },
-        { label: 'Maintenance', date: 'Feb 22, 2026', desc: 'IOS software security patch v17.9.4 applied.' },
-        { label: 'Current', date: 'Jul 12, 2026', desc: 'Online, port throughput averages 34Gbps, 2 alerts logged.' }
-      ],
-      aiRecommendation: 'System alerts report port 12 flapping. Schedule network stack cable inspection.',
-      status: 'In Use'
-    },
-    'AF-0009': {
-      id: 'AF-0009',
-      name: 'ThinkPad X1 Carbon Gen 11',
-      category: 'Workstation',
-      department: 'Finance',
-      owner: 'Retired',
-      purchaseDate: '2023-02-15',
-      serialNumber: 'PF-289D2B',
-      warrantyStatus: 'Expired',
-      healthScore: 35,
-      riskLevel: 'Medium',
-      condition: 'Poor',
-      batteryPercentage: 54,
-      lastMaintenanceDays: 15,
-      timelineSteps: [
-        { label: 'Purchased', date: 'Feb 15, 2023', desc: 'Acquired through Lenovo Business.' },
-        { label: 'Allocated', date: 'Feb 18, 2023', desc: 'Assigned to Finance Director.' },
-        { label: 'Maintenance', date: 'Jun 27, 2026', desc: 'Motherboard diagnostic: identified blown power regulator.' },
-        { label: 'Current', date: 'Jul 12, 2026', desc: 'Retired from service queue, scheduled for secure recycling.' }
-      ],
-      aiRecommendation: 'E-Waste: Asset is retired. Carry out secure hard drive shredding and log recycling certificate.',
-      status: 'Retired'
+  // Seeded database reference mappings (CORS safe database IDs)
+  const employees = [
+    { id: 1, name: 'Sarah Connor' },
+    { id: 2, name: 'John Doe' },
+    { id: 3, name: 'Alex Mercer' },
+    { id: 4, name: 'Elena Rostova' },
+    { id: 5, name: 'Michael Scott' },
+    { id: 6, name: 'Jane Austen' }
+  ];
+
+  const departments = [
+    { id: 1, name: 'Marketing' },
+    { id: 2, name: 'HR' },
+    { id: 3, name: 'Engineering' }
+  ];
+
+  const loadAssetDetail = async (assetId: string) => {
+    try {
+      setLoading(true);
+      const data = await api.getAssetById(assetId);
+      setAsset(data);
+    } catch (error) {
+      console.error('Failed to load asset details:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const getFallbackAsset = (assetId: string): AssetDetailData => {
-    // If it exists in Assets catalog but not details, make a helper lookup
-    const savedAssets = localStorage.getItem('assetflow_assets');
-    let name = 'Newly Registered Asset';
-    let cat = 'Workstation';
-    let dept = 'Engineering';
-    let stat: AssetDetailData['status'] = 'Available';
-    let health = 100;
-
-    if (savedAssets) {
-      const parsed = JSON.parse(savedAssets) as any[];
-      const matched = parsed.find(a => a.id === assetId);
-      if (matched) {
-        name = matched.name;
-        cat = matched.category;
-        dept = matched.department;
-        stat = matched.status;
-        health = matched.healthScore;
-      }
-    }
-
-    return {
-      id: assetId,
-      name,
-      category: cat,
-      department: dept,
-      owner: 'Unassigned',
-      purchaseDate: new Date().toISOString().split('T')[0],
-      serialNumber: 'PENDING-GEN-01',
-      warrantyStatus: 'Active',
-      healthScore: health,
-      riskLevel: 'Low',
-      condition: 'Excellent',
-      lastMaintenanceDays: 0,
-      timelineSteps: [
-        { label: 'Purchased', date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), desc: 'Asset acquired.' },
-        { label: 'Allocated', date: 'Pending', desc: 'Pending department allocation.' },
-        { label: 'Maintenance', date: 'None', desc: 'No maintenance records registered.' },
-        { label: 'Current', date: 'Active', desc: 'Asset registered in system database.' }
-      ],
-      aiRecommendation: 'Asset is fully optimized. No current maintenance recommendations.',
-      status: stat
-    };
-  };
-
-  // Load details from LocalStorage (or seed from baseDb)
   useEffect(() => {
-    if (!id) return;
-    const detailKey = `assetflow_detail_${id}`;
-    const savedDetail = localStorage.getItem(detailKey);
-
-    if (savedDetail) {
-      setAsset(JSON.parse(savedDetail));
-    } else {
-      const initialDetail = baseDb[id] || getFallbackAsset(id);
-      localStorage.setItem(detailKey, JSON.stringify(initialDetail));
-      setAsset(initialDetail);
+    if (id) {
+      loadAssetDetail(id);
     }
   }, [id]);
 
-  if (!asset) {
-    return <div className="text-sm text-text-muted p-8">Loading digital twin node...</div>;
+  const handleAllocateOrTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !asset) return;
+
+    try {
+      if (isTransferMode || asset.assigned_to !== null) {
+        // Transfer flow
+        await api.transferAsset(String(asset.id), selectedEmployeeId, selectedDeptId);
+      } else {
+        // Allocate directly
+        await api.allocateAsset(String(asset.id), selectedEmployeeId, selectedDeptId);
+      }
+      setIsAllocOpen(false);
+      setIsTransferMode(false);
+      loadAssetDetail(id); // Reload updated data
+    } catch (error) {
+      console.error('Failed to process allocation:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6 max-w-5xl">
+        <div className="h-9 w-32 skeleton-pulse"></div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="h-64 w-full skeleton-pulse rounded-lg"></div>
+          <div className="h-64 w-full skeleton-pulse rounded-lg"></div>
+        </div>
+        <div className="h-44 w-full skeleton-pulse rounded-lg"></div>
+        <div className="h-16 w-full skeleton-pulse rounded-lg"></div>
+      </div>
+    );
   }
 
-  // Check if unallocated
-  const isUnallocated = asset.owner === 'Unassigned' || asset.owner === 'Retired';
+  if (!asset) {
+    return (
+      <div className="space-y-6 max-w-5xl">
+        <button onClick={() => navigate('/assets')} className="btn-secondary text-xs">
+          <ArrowLeft size={14} /> Back to Inventory
+        </button>
+        <div className="card-premium p-8 text-center text-text-muted">
+          Digital Twin Node matching ID "{id}" was not compiled in database.
+        </div>
+      </div>
+    );
+  }
 
-  const handleAllocateOrTransfer = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!id) return;
-
-    const oldOwner = asset.owner;
-    const isTransfer = !isUnallocated;
-
-    // Build timeline details
-    const stepLabel = isTransfer ? 'Transferred' : 'Allocated';
-    const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    const stepDesc = isTransfer 
-      ? `Transferred from ${oldOwner} to ${selectedEmployee} (${selectedDept} dept).` 
-      : `Allocated directly to ${selectedEmployee} in the ${selectedDept} department.`;
-
-    const updatedTimeline = [
-      ...asset.timelineSteps.filter(s => s.label !== 'Current'),
-      { label: stepLabel, date: dateStr, desc: stepDesc },
-      { label: 'Current', date: dateStr, desc: `Operational under ${selectedEmployee}.` }
-    ];
-
-    const updatedAsset: AssetDetailData = {
-      ...asset,
-      owner: selectedEmployee,
-      department: selectedDept,
-      status: 'In Use',
-      timelineSteps: updatedTimeline
-    };
-
-    // 1. Save updated details locally & in localStorage
-    setAsset(updatedAsset);
-    localStorage.setItem(`assetflow_detail_${id}`, JSON.stringify(updatedAsset));
-
-    // 2. Sync general Assets inventory list in localStorage
-    const savedAssets = localStorage.getItem('assetflow_assets');
-    if (savedAssets) {
-      const parsed = JSON.parse(savedAssets) as any[];
-      const index = parsed.findIndex(a => a.id === id);
-      if (index !== -1) {
-        parsed[index].status = 'In Use';
-        parsed[index].department = selectedDept;
-        localStorage.setItem('assetflow_assets', JSON.stringify(parsed));
-      }
-    }
-
-    // 3. Log to shared activity log
-    const savedLogs = localStorage.getItem('assetflow_activity_log');
-    const logs = savedLogs ? JSON.parse(savedLogs) : [];
-    const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    
-    // Message format as specified: "Daksh allocated Laptop-04 — 11:42 AM"
-    const actionMsg = isTransfer 
-      ? `Daksh transferred ${asset.name} from ${oldOwner} to ${selectedEmployee} — ${timeStr}`
-      : `Daksh allocated ${asset.name} to ${selectedEmployee} — ${timeStr}`;
-
-    const newLogs = [...logs, actionMsg];
-    localStorage.setItem('assetflow_activity_log', JSON.stringify(newLogs));
-
-    // Close panel
-    setIsAllocOpen(false);
-    setIsTransferMode(false);
-  };
-
-  // Health Score helpers
-  const getHealthStatus = (score: number) => {
-    if (score > 80) return { label: 'Healthy', color: 'bg-green-50 text-green-700 border-green-200' };
-    if (score >= 50) return { label: 'Monitor', color: 'bg-amber-50 text-amber-700 border-amber-200' };
-    return { label: 'Critical', color: 'bg-red-50 text-red-700 border-red-200' };
-  };
-
-  const healthStatus = getHealthStatus(asset.healthScore);
+  const isUnallocated = asset.assigned_to === null;
+  const warrantyStatus = asset.warranty_expiry && new Date(asset.warranty_expiry) > new Date() ? 'Active' : 'Expired';
+  const healthStatus = asset.health_score > 80 
+    ? { label: 'Healthy', color: 'bg-green-50 text-green-700 border-green-200' }
+    : asset.health_score >= 50
+    ? { label: 'Monitor', color: 'bg-amber-50 text-amber-700 border-amber-200' }
+    : { label: 'Critical', color: 'bg-red-50 text-red-700 border-red-200' };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -399,7 +144,7 @@ export default function AssetDetail() {
   };
 
   return (
-    <div className="space-y-6 max-w-5xl relative">
+    <div className="space-y-6 max-w-5xl relative font-sans">
       {/* Back navigation & Action bar */}
       <div className="flex items-center justify-between">
         <button 
@@ -410,7 +155,7 @@ export default function AssetDetail() {
         </button>
 
         <div className="flex items-center gap-3">
-          <span className="font-mono text-xs font-semibold text-text-muted hidden sm:inline">Node: {asset.id}</span>
+          <span className="font-mono text-xs font-semibold text-text-muted hidden sm:inline">Node: {asset.asset_code}</span>
           <button 
             onClick={() => {
               setIsTransferMode(false);
@@ -426,7 +171,7 @@ export default function AssetDetail() {
       {/* Main Details Panel Layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        {/* Left Column (Static Metadata Card) */}
+        {/* Left Column (Metadata Card) */}
         <div className="card-premium p-6 space-y-6 bg-white">
           <div className="flex items-center gap-4 border-b border-border-light pb-4">
             <div className="w-16 h-16 bg-gray-50 border border-border-light rounded flex items-center justify-center text-text-muted flex-shrink-0">
@@ -437,7 +182,7 @@ export default function AssetDetail() {
               <div className="flex items-center gap-1.5 text-xs text-text-muted mt-1">
                 <span>{asset.category}</span>
                 <span>&bull;</span>
-                <span>{asset.id}</span>
+                <span>{asset.asset_code}</span>
               </div>
             </div>
           </div>
@@ -445,24 +190,24 @@ export default function AssetDetail() {
           <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm">
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-text-muted mb-0.5">Asset Owner</p>
-              <p className="font-medium text-text">{asset.owner}</p>
+              <p className="font-medium text-text">{asset.assigned_to_name || 'Unassigned'}</p>
             </div>
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-text-muted mb-0.5">Department</p>
-              <p className="font-medium text-text">{asset.department}</p>
+              <p className="font-medium text-text">{asset.department_name}</p>
             </div>
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-text-muted mb-0.5">Purchase Date</p>
-              <p className="font-mono font-medium text-text">{asset.purchaseDate}</p>
+              <p className="font-mono font-medium text-text">{asset.purchase_date}</p>
             </div>
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-text-muted mb-0.5">Serial Number</p>
-              <p className="font-mono font-medium text-text truncate">{asset.serialNumber}</p>
+              <p className="font-mono font-medium text-text truncate">{asset.serial_number}</p>
             </div>
             <div>
               <p className="text-[10px] uppercase font-bold tracking-wider text-text-muted mb-0.5">Warranty Status</p>
-              <span className={`tag-status mt-0.5 border ${asset.warrantyStatus === 'Active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
-                {asset.warrantyStatus}
+              <span className={`tag-status mt-0.5 border ${warrantyStatus === 'Active' ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                {warrantyStatus}
               </span>
             </div>
             <div>
@@ -489,13 +234,13 @@ export default function AssetDetail() {
               <div className="flex items-baseline justify-between">
                 <span className="text-xs font-semibold text-text-muted">Health Index</span>
                 <div className="text-2xl font-bold tracking-tight text-text">
-                  {asset.healthScore}<span className="text-sm font-medium text-text-muted">/100</span>
+                  {asset.health_score}<span className="text-sm font-medium text-text-muted">/100</span>
                 </div>
               </div>
               <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
                 <div 
                   className="bg-secondary h-full transition-all duration-500" 
-                  style={{ width: `${asset.healthScore}%` }}
+                  style={{ width: `${asset.health_score}%` }}
                 ></div>
               </div>
             </div>
@@ -504,17 +249,17 @@ export default function AssetDetail() {
             <div className="grid grid-cols-2 gap-4 pt-2">
               <div className="bg-gray-50/50 p-2.5 rounded border border-border-light">
                 <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Risk Level</span>
-                <span className="text-sm font-semibold text-text">{asset.riskLevel}</span>
+                <span className="text-sm font-semibold text-text">{asset.risk_level || 'Low'}</span>
               </div>
               <div className="bg-gray-50/50 p-2.5 rounded border border-border-light">
                 <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Condition</span>
                 <span className="text-sm font-semibold text-text">{asset.condition}</span>
               </div>
-              {asset.batteryPercentage !== undefined && (
+              {asset.battery_pct !== null && asset.battery_pct !== undefined && (
                 <div className="bg-gray-50/50 p-2.5 rounded border border-border-light flex items-center justify-between col-span-2">
                   <div>
                     <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block">Battery Health</span>
-                    <span className="text-sm font-semibold text-text">{asset.batteryPercentage}% Capacity</span>
+                    <span className="text-sm font-semibold text-text">{asset.battery_pct}% Capacity</span>
                   </div>
                   <Battery className="text-text-muted" size={20} />
                 </div>
@@ -524,7 +269,7 @@ export default function AssetDetail() {
 
           <div className="text-xs text-text-muted border-t border-border-light pt-3 flex items-center gap-1.5 font-medium">
             <Wrench size={13} />
-            <span>Last Maintenance: {asset.lastMaintenanceDays === 0 ? 'Never' : `${asset.lastMaintenanceDays} days ago`}</span>
+            <span>Last Maintenance: {asset.last_maintenance_date || 'No maintenance recorded'}</span>
           </div>
         </div>
 
@@ -537,7 +282,7 @@ export default function AssetDetail() {
         <div className="relative">
           <div className="absolute top-3 left-[12%] right-[12%] h-0.5 bg-border-light z-0"></div>
           <div className="grid grid-cols-4 relative z-10">
-            {asset.timelineSteps.map((step, idx) => (
+            {asset.timelineSteps && asset.timelineSteps.map((step, idx) => (
               <div key={idx} className="flex flex-col items-center text-center space-y-2">
                 <div className="w-6.5 h-6.5 rounded-full bg-primary text-white flex items-center justify-center font-bold text-[10px] shadow-sm border-4 border-white">
                   {idx + 1}
@@ -576,7 +321,7 @@ export default function AssetDetail() {
             }}
           ></div>
 
-          {/* Drawer Body Container */}
+          {/* Drawer Body */}
           <div className="relative w-full max-w-md bg-surface shadow-xl h-full flex flex-col justify-between border-l border-border-light z-10 animate-slide-in">
             {/* Header */}
             <div className="h-16 border-b border-border-light flex items-center justify-between px-6 bg-gray-50/50">
@@ -594,17 +339,17 @@ export default function AssetDetail() {
               </button>
             </div>
 
-            {/* Scrollable Form Area */}
+            {/* Scrollable Form */}
             <div className="flex-1 overflow-y-auto p-6">
-              {/* Conflict State (Asset is already allocated) */}
               {!isUnallocated && !isTransferMode ? (
+                // Conflict
                 <div className="space-y-5">
                   <div className="bg-amber-50 border border-amber-200 rounded-[4px] p-4 flex items-start gap-3">
                     <AlertCircle className="text-amber-600 mt-0.5 flex-shrink-0" size={18} />
                     <div className="space-y-1">
                       <h4 className="text-sm font-bold text-amber-900">Asset Already Allocated</h4>
                       <p className="text-xs text-amber-700 leading-normal">
-                        This asset is currently assigned to <span className="font-semibold">{asset.owner}</span> in the <span className="font-semibold">{asset.department}</span> department.
+                        This asset is currently assigned to <span className="font-semibold">{asset.assigned_to_name}</span> in the <span className="font-semibold">{asset.department_name}</span> department.
                       </p>
                     </div>
                   </div>
@@ -622,12 +367,12 @@ export default function AssetDetail() {
                   </div>
                 </div>
               ) : (
-                // Allocation / Transfer Form
+                // Form input
                 <form id="asset-allocation-form" onSubmit={handleAllocateOrTransfer} className="space-y-5">
                   {isTransferMode && (
                     <div className="bg-blue-50 border border-blue-200 rounded-[4px] p-3 text-xs text-blue-800 flex items-center gap-2">
                       <CheckCircle2 size={15} className="text-blue-600 flex-shrink-0" />
-                      <span>Authorized: Transferring asset from <strong>{asset.owner}</strong>.</span>
+                      <span>Authorized: Transferring asset from <strong>{asset.assigned_to_name}</strong>.</span>
                     </div>
                   )}
 
@@ -635,11 +380,11 @@ export default function AssetDetail() {
                     <label className="text-xs font-semibold text-text-muted">Target Employee</label>
                     <select 
                       className="input-premium w-full text-sm"
-                      value={selectedEmployee}
-                      onChange={(e) => setSelectedEmployee(e.target.value)}
+                      value={selectedEmployeeId}
+                      onChange={(e) => setSelectedEmployeeId(parseInt(e.target.value))}
                     >
                       {employees.map(emp => (
-                        <option key={emp} value={emp}>{emp}</option>
+                        <option key={emp.id} value={emp.id}>{emp.name}</option>
                       ))}
                     </select>
                   </div>
@@ -648,11 +393,11 @@ export default function AssetDetail() {
                     <label className="text-xs font-semibold text-text-muted">Target Department</label>
                     <select 
                       className="input-premium w-full text-sm"
-                      value={selectedDept}
-                      onChange={(e) => setSelectedDept(e.target.value)}
+                      value={selectedDeptId}
+                      onChange={(e) => setSelectedDeptId(parseInt(e.target.value))}
                     >
                       {departments.map(dept => (
-                        <option key={dept} value={dept}>{dept}</option>
+                        <option key={dept.id} value={dept.id}>{dept.name}</option>
                       ))}
                     </select>
                   </div>
@@ -664,7 +409,7 @@ export default function AssetDetail() {
               )}
             </div>
 
-            {/* Footer with actions (only for form input state) */}
+            {/* Footer buttons */}
             {(isUnallocated || isTransferMode) && (
               <div className="h-16 border-t border-border-light flex items-center justify-end px-6 gap-2 bg-gray-50/50">
                 <button 

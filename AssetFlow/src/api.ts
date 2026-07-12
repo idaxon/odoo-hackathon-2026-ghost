@@ -1,0 +1,43 @@
+const BASE_URL = 'http://localhost:3001/api';
+
+async function request(path: string, options?: RequestInit) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+  if (!res.ok) {
+    if (res.status === 409) {
+      // Return details for conflict logic
+      return res.json();
+    }
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || `HTTP error ${res.status}`);
+  }
+  return res.json();
+}
+
+export const api = {
+  getDashboardSummary: () => request('/dashboard/summary'),
+  getAssets: () => request('/assets'),
+  getAssetById: (id: string) => request(`/assets/${id}`),
+  createAsset: (data: any) => request('/assets', { method: 'POST', body: JSON.stringify(data) }),
+  allocateAsset: (id: string, employeeId: number, departmentId: number) => 
+    request(`/assets/${id}/allocate`, { method: 'PATCH', body: JSON.stringify({ employeeId, departmentId }) }),
+  transferAsset: (id: string, employeeId: number, departmentId: number) => 
+    request(`/assets/${id}/transfer`, { method: 'PATCH', body: JSON.stringify({ employeeId, departmentId }) }),
+  getBookings: () => request('/bookings'),
+  createBooking: (data: any) => request('/bookings', { method: 'POST', body: JSON.stringify(data) }),
+  getMaintenanceRequests: () => request('/maintenance'),
+  createMaintenanceRequest: (data: any) => request('/maintenance', { method: 'POST', body: JSON.stringify(data) }),
+  resolveMaintenanceRequest: (id: number) => request(`/maintenance/${id}/resolve`, { method: 'PATCH' }),
+  getActivityLogs: () => request('/activity-logs'),
+  
+  // AI recommendations
+  getAIIdleAssets: () => request('/ai/idle-assets'),
+  getAIReplaceCandidates: () => request('/ai/replace-candidates'),
+  getAIAvailableCategory: (category: string) => request(`/ai/available/${category}`),
+  getAIMaintenanceToday: () => request('/ai/maintenance-today')
+};

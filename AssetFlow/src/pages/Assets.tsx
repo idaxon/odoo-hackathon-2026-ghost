@@ -1,40 +1,27 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
 import { Plus, Search, X, Download, Cpu, Smartphone, Monitor, HardDrive, Sparkles, Check, Image as ImageIcon } from 'lucide-react';
+import { api } from '../api';
 
 interface Asset {
-  id: string;
+  id: number;
+  asset_code: string;
   name: string;
   category: string;
-  department: string;
+  department_name: string;
   status: 'Available' | 'In Use' | 'Maintenance' | 'Retired';
-  healthScore: number;
+  health_score: number;
 }
 
 export default function Assets() {
   const navigate = useNavigate();
-  const [assets, setAssets] = useState<Asset[]>(() => {
-    const saved = localStorage.getItem('assetflow_assets');
-    if (saved) return JSON.parse(saved);
-    const defaults: Asset[] = [
-      { id: 'AF-0001', name: 'MacBook Pro 16" (M3 Max)', category: 'Workstation', department: 'Engineering', status: 'In Use', healthScore: 94 },
-      { id: 'AF-0002', name: 'Dell UltraSharp 32" 4K Monitor', category: 'Monitor', department: 'Design', status: 'Available', healthScore: 98 },
-      { id: 'AF-0003', name: 'iPhone 15 Pro Max 256GB', category: 'Mobile', department: 'Marketing', status: 'In Use', healthScore: 89 },
-      { id: 'AF-0004', name: 'Supermicro 2U Database Server', category: 'Server', department: 'Infrastructure', status: 'Maintenance', healthScore: 42 },
-      { id: 'AF-0005', name: 'Sony WH-1000XM5 Headset', category: 'Accessories', department: 'HR', status: 'Available', healthScore: 100 },
-      { id: 'AF-0006', name: 'Herman Miller Aeron Chair', category: 'Furniture', department: 'Operations', status: 'In Use', healthScore: 91 },
-      { id: 'AF-0007', name: 'iPad Pro 12.9" (M2)', category: 'Tablet', department: 'Sales', status: 'Available', healthScore: 87 },
-      { id: 'AF-0008', name: 'Cisco Catalyst 9300 Switch', category: 'Networking', department: 'Infrastructure', status: 'In Use', healthScore: 78 },
-      { id: 'AF-0009', name: 'ThinkPad X1 Carbon Gen 11', category: 'Workstation', department: 'Finance', status: 'Retired', healthScore: 35 }
-    ];
-    localStorage.setItem('assetflow_assets', JSON.stringify(defaults));
-    return defaults;
-  });
 
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isPanelOpen, setIsPanelOpen] = useState(false);
-  const [registeredAsset, setRegisteredAsset] = useState<Asset | null>(null);
+  const [registeredAsset, setRegisteredAsset] = useState<{ id: string; name: string; category: string } | null>(null);
 
   // Form State
   const [formName, setFormName] = useState('');
@@ -50,6 +37,22 @@ export default function Assets() {
   const categories = ['Workstation', 'Monitor', 'Mobile', 'Server', 'Accessories', 'Furniture', 'Tablet', 'Networking'];
   const departments = ['Engineering', 'Design', 'Marketing', 'Infrastructure', 'HR', 'Operations', 'Sales', 'Finance'];
 
+  const loadAssets = async () => {
+    try {
+      setLoading(true);
+      const data = await api.getAssets();
+      setAssets(data || []);
+    } catch (error) {
+      console.error('Failed to fetch assets:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAssets();
+  }, []);
+
   const getStatusStyle = (status: Asset['status']) => {
     switch (status) {
       case 'Available':
@@ -59,6 +62,8 @@ export default function Assets() {
       case 'Maintenance':
         return 'bg-amber-50 text-amber-700 border border-amber-200';
       case 'Retired':
+        return 'bg-gray-100 text-gray-700 border border-gray-200';
+      default:
         return 'bg-gray-100 text-gray-700 border border-gray-200';
     }
   };
@@ -92,34 +97,45 @@ export default function Assets() {
     setRegisteredAsset(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Map department names to database seeded IDs (1: Marketing, 2: HR, 3: Engineering, 4+: fallback/default to Engineering/1)
+  const getDepartmentId = (deptName: string) => {
+    switch (deptName) {
+      case 'Marketing': return 1;
+      case 'HR': return 2;
+      case 'Engineering': return 3;
+      default: return 3; // Default to Engineering
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Auto-generate Asset ID incrementing from list length
-    const nextNum = assets.length + 1;
-    const newId = `AF-${String(nextNum).padStart(4, '0')}`;
-
-    const newAsset: Asset = {
-      id: newId,
+    const payload = {
       name: formName || 'Unnamed Asset',
       category: formCategory,
-      department: formDepartment,
-      status: 'Available',
-      healthScore: 100 // default for new asset
+      department_id: getDepartmentId(formDepartment),
+      purchase_date: formPurchaseDate || new Date().toISOString().split('T')[0],
+      purchase_cost: parseFloat(formPurchaseCost) || 0,
+      vendor: formVendor || 'Vendor Store',
+      serial_number: formSerial || 'SN-GEN-01',
+      warranty_expiry: formWarranty || '',
+      condition: 'Excellent',
+      battery_pct: formCategory === 'Workstation' || formCategory === 'Mobile' ? 100 : null
     };
 
-    const updated = [...assets, newAsset];
-    setAssets(updated);
-    localStorage.setItem('assetflow_assets', JSON.stringify(updated));
-    setRegisteredAsset(newAsset);
-
-    // Write action to shared activity log
-    const savedLogs = localStorage.getItem('assetflow_activity_log');
-    const logs = savedLogs ? JSON.parse(savedLogs) : [];
-    const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    const logMsg = `Daksh registered ${newAsset.name} — ${timeStr}`;
-    const newLogs = [...logs, logMsg];
-    localStorage.setItem('assetflow_activity_log', JSON.stringify(newLogs));
+    try {
+      const response = await api.createAsset(payload);
+      if (response && response.asset_code) {
+        setRegisteredAsset({
+          id: response.asset_code,
+          name: payload.name,
+          category: payload.category
+        });
+        loadAssets(); // Refetch database items
+      }
+    } catch (error) {
+      console.error('Failed to register asset:', error);
+    }
   };
 
   const downloadQR = (assetId: string) => {
@@ -137,9 +153,9 @@ export default function Assets() {
 
   const filteredAssets = assets.filter(asset =>
     asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    asset.asset_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
     asset.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.department.toLowerCase().includes(searchTerm.toLowerCase())
+    (asset.department_name && asset.department_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -176,7 +192,7 @@ export default function Assets() {
       </div>
 
       {/* Main Table view */}
-      <div className="card-premium overflow-hidden bg-white">
+      <div className="card-premium overflow-hidden bg-white font-sans">
         <table className="min-w-full divide-y divide-border-light text-left text-sm">
           <thead className="bg-gray-50 text-text-muted text-xs font-semibold uppercase">
             <tr>
@@ -189,39 +205,50 @@ export default function Assets() {
             </tr>
           </thead>
           <tbody className="divide-y divide-border-light bg-white">
-            {filteredAssets.map((asset) => (
-              <tr 
-                key={asset.id} 
-                className="hover:bg-gray-50/50 transition-colors cursor-pointer"
-                onClick={() => navigate(`/assets/${asset.id}`)}
-              >
-                <td className="px-6 py-4 font-mono text-xs font-semibold text-text">{asset.id}</td>
-                <td className="px-6 py-4 font-medium text-text">{asset.name}</td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-1.5 text-xs text-text">
-                    {getCategoryIcon(asset.category)}
-                    {asset.category}
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-xs font-medium text-text-muted">{asset.department}</td>
-                <td className="px-6 py-4">
-                  <span className={`tag-status ${getStatusStyle(asset.status)}`}>
-                    {asset.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full bg-current" style={{ color: asset.healthScore >= 90 ? '#16a34a' : asset.healthScore >= 60 ? '#d97706' : '#dc2626' }}></div>
-                    <span className={`font-semibold text-xs ${getHealthColor(asset.healthScore)}`}>
-                      {asset.healthScore}%
+            {loading ? (
+              // Table row loading skeletons
+              Array.from({ length: 6 }).map((_, i) => (
+                <tr key={i}>
+                  <td colSpan={6} className="px-6 py-4">
+                    <div className="h-6 w-full skeleton-pulse rounded"></div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              filteredAssets.map((asset) => (
+                <tr 
+                  key={asset.id} 
+                  className="hover:bg-gray-50/50 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/assets/${asset.id}`)}
+                >
+                  <td className="px-6 py-4 font-mono text-xs font-semibold text-text">{asset.asset_code}</td>
+                  <td className="px-6 py-4 font-medium text-text">{asset.name}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-1.5 text-xs text-text">
+                      {getCategoryIcon(asset.category)}
+                      {asset.category}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-xs font-medium text-text-muted">{asset.department_name}</td>
+                  <td className="px-6 py-4">
+                    <span className={`tag-status ${getStatusStyle(asset.status)}`}>
+                      {asset.status === 'In Use' ? 'Allocated' : asset.status}
                     </span>
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-current" style={{ color: asset.health_score >= 90 ? '#16a34a' : asset.health_score >= 60 ? '#d97706' : '#dc2626' }}></div>
+                      <span className={`font-semibold text-xs ${getHealthColor(asset.health_score)}`}>
+                        {asset.health_score}%
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
-        {filteredAssets.length === 0 && (
+        {!loading && filteredAssets.length === 0 && (
           <div className="p-12 text-center text-text-muted text-sm bg-white">
             No assets found matching search criteria.
           </div>
@@ -372,7 +399,7 @@ export default function Assets() {
                   </div>
                 </form>
               ) : (
-                // QR Confirmation view: Plain white card, no decorative border
+                // QR Confirmation view
                 <div className="space-y-6 py-4">
                   <div className="bg-green-50 border border-green-200 rounded-[4px] p-4 flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center flex-shrink-0">
@@ -384,7 +411,6 @@ export default function Assets() {
                     </div>
                   </div>
 
-                  {/* Plain white card, no decorative border */}
                   <div className="bg-white p-6 border border-border-light rounded-lg shadow-sm flex flex-col items-center justify-center space-y-4">
                     <QRCodeCanvas
                       id="qr-code-canvas"
@@ -420,20 +446,20 @@ export default function Assets() {
               )}
             </div>
 
-            {/* Footer containing action buttons (only if not registered yet) */}
+            {/* Footer containing action buttons */}
             {!registeredAsset && (
               <div className="h-16 border-t border-border-light flex items-center justify-end px-6 gap-2 bg-gray-50/50">
                 <button 
                   type="button" 
                   onClick={() => setIsPanelOpen(false)} 
-                  className="btn-secondary py-1.5 px-4 text-xs"
+                  className="btn-secondary py-1.5 px-4 text-xs font-medium"
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
                   form="asset-register-form" 
-                  className="btn-primary py-1.5 px-4 text-xs"
+                  className="btn-primary py-1.5 px-4 text-xs font-semibold"
                 >
                   Confirm Registration
                 </button>
