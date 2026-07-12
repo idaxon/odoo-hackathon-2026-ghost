@@ -88,6 +88,18 @@ db.exec(`
     timestamp TEXT NOT NULL,
     FOREIGN KEY(asset_id) REFERENCES assets(id)
   );
+
+  CREATE TABLE IF NOT EXISTS asset_requests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    requested_by TEXT NOT NULL,
+    category TEXT NOT NULL,
+    department_id INTEGER NOT NULL,
+    justification TEXT NOT NULL,
+    status TEXT NOT NULL, -- Pending, Approved, Rejected
+    duplicate_risk INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY(department_id) REFERENCES departments(id)
+  );
 `);
 
 // Seeding Logic
@@ -335,6 +347,20 @@ const seedDatabase = () => {
       }
     }
     console.log('Seeded scan logs.');
+  }
+
+  // 8. Seed Asset Requests
+  const requestCount = db.prepare('SELECT COUNT(*) as count FROM asset_requests').get().count;
+  if (requestCount === 0) {
+    const insertRequest = db.prepare('INSERT INTO asset_requests (requested_by, category, department_id, justification, status, duplicate_risk, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    const reqs = [
+      { requester: 'Sarah Connor', category: 'Printer', deptId: 1, justification: 'Marketing needs a dedicated barcode label printer.', status: 'Pending', duplicateRisk: 1, date: '2026-07-12 11:20' },
+      { requester: 'Michael Scott', category: 'Workstation', deptId: 3, justification: 'New Engineer joining next week needs a laptop.', status: 'Pending', duplicateRisk: 0, date: '2026-07-12 11:35' }
+    ];
+    for (const r of reqs) {
+      insertRequest.run(r.requester, r.category, r.deptId, r.justification, r.status, r.duplicateRisk, r.date);
+    }
+    console.log('Seeded asset requests.');
   }
 };
 

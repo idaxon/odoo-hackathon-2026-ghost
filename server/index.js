@@ -545,6 +545,96 @@ app.get('/api/assets/:id/scan-history', (req, res) => {
   }
 });
 
+// GET /api/asset-requests → List all requests
+app.get('/api/asset-requests', (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT r.*, d.name as department_name 
+      FROM asset_requests r 
+      JOIN departments d ON r.department_id = d.id 
+      ORDER BY r.id DESC
+    `).all();
+    res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/asset-requests → Create an asset request with duplicate check
+app.post('/api/asset-requests', (req, res) => {
+  const { requested_by, category, department_id, justification, force } = req.body;
+  try {
+    // Look up available or idle assets matching the requested category
+    const matchingAssets = db.prepare(`
+      SELECT a.*, d.name as department_name
+      FROM assets a
+      JOIN departments d ON a.department_id = d.id
+      WHERE a.category = ? AND (
+        a.status = 'Available' OR (
+          a.idle_since_date IS NOT NULL AND 
+          (strftime('%s', 'now') - strftime('%s', a.idle_since_date)) / 86400 >= 20
+        )
+      )
+    `).all(category);
+
+    // If matches exist and force is not true, interrupt the user
+    if (matchingAssets.length > 0 && force !== true) {
+      return res.json({ duplicate_warning: true, matching_assets: matchingAssets });
+    }
+
+    // Determine if request proceeds under duplicate risk flag
+    const duplicateRisk = matchingAssets.length > 0 ? 1 : 0;
+    const timestamp = new Date().toISOString().replace('T', ' ').substring(0, 16);
+
+    const result = db.prepare(`
+      INSERT INTO asset_requests (requested_by, category, department_id, justification, status, duplicate_risk, created_at)
+      VALUES (?, ?, ?, ?, 'Pending', ?, ?)
+    `).run(requested_by, category, department_id, justification, duplicateRisk, timestamp);
+
+    logActivity(requested_by, 'submitted asset request', `for a new ${category} (Risk: ${duplicateRisk ? 'High' : 'None'})`);
+
+    res.status(201).json({ success: true, duplicate_warning: false, requestId: result.lastInsertRowid });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PATCH /api/asset-requests/:id/approve → Approve request
+app.patch('/api/asset-requests/:id/approve', (req, res) => {
+  const { id } = req.params;
+  try {
+    const requestItem = db.prepare('SELECT * FROM asset_requests WHERE id = ?').get(id);
+    if (!requestItem) {
+      return res.status(404).json({ error: 'Request not found.' });
+    }
+
+    db.prepare("UPDATE asset_requests SET status = 'Approved' WHERE id = ?").run(id);
+    logActivity('Asset Manager', 'approved asset request', `ID ${id} for ${requestItem.category}`);
+
+    res.json({ message: 'Request approved successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PATCH /api/asset-requests/:id/reject → Reject request
+app.patch('/api/asset-requests/:id/reject', (req, res) => {
+  const { id } = req.params;
+  try {
+    const requestItem = db.prepare('SELECT * FROM asset_requests WHERE id = ?').get(id);
+    if (!requestItem) {
+      return res.status(404).json({ error: 'Request not found.' });
+    }
+
+    db.prepare("UPDATE asset_requests SET status = 'Rejected' WHERE id = ?").run(id);
+    logActivity('Asset Manager', 'rejected asset request', `ID ${id} for ${requestItem.category}`);
+
+    res.json({ message: 'Request rejected successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Start Server
 app.listen(PORT, () => {
   console.log(`AssetFlow backend listening on http://localhost:${PORT}`);

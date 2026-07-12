@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeCanvas } from 'qrcode.react';
-import { Plus, Search, X, Download, Cpu, Smartphone, Monitor, HardDrive, Sparkles, Check, Image as ImageIcon } from 'lucide-react';
+import { Plus, Search, X, Download, Cpu, Smartphone, Monitor, HardDrive, Sparkles, Check, Image as ImageIcon, AlertTriangle, Layers } from 'lucide-react';
 import { api } from '../api';
 
 interface Asset {
@@ -12,6 +12,18 @@ interface Asset {
   department_name: string;
   status: 'Available' | 'In Use' | 'Maintenance' | 'Retired';
   health_score: number;
+}
+
+interface AssetRequest {
+  id: number;
+  requested_by: string;
+  category: string;
+  department_id: number;
+  justification: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  duplicate_risk: number;
+  created_at: string;
+  department_name: string;
 }
 
 export default function Assets() {
@@ -34,7 +46,17 @@ export default function Assets() {
   const [formWarranty, setFormWarranty] = useState('');
   const [formImage, setFormImage] = useState<File | null>(null);
 
-  const categories = ['Workstation', 'Monitor', 'Mobile', 'Server', 'Accessories', 'Furniture', 'Tablet', 'Networking'];
+  // Asset Requests State
+  const [requests, setRequests] = useState<AssetRequest[]>([]);
+  const [isRequestOpen, setIsRequestOpen] = useState(false);
+  const [reqRequestedBy, setReqRequestedBy] = useState('Jane Austen');
+  const [reqCategory, setReqCategory] = useState('Workstation');
+  const [reqDeptId, setReqDeptId] = useState(3);
+  const [reqJustification, setReqJustification] = useState('');
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
+  const [matchingAssets, setMatchingAssets] = useState<any[]>([]);
+
+  const categories = ['Workstation', 'Monitor', 'Mobile', 'Server', 'Accessories', 'Furniture', 'Tablet', 'Networking', 'Printer'];
   const departments = ['Engineering', 'Design', 'Marketing', 'Infrastructure', 'HR', 'Operations', 'Sales', 'Finance'];
 
   const loadAssets = async () => {
@@ -49,10 +71,65 @@ export default function Assets() {
     }
   };
 
+  const loadRequests = async () => {
+    try {
+      const data = await api.getAssetRequests();
+      setRequests(data || []);
+    } catch (err) {
+      console.error('Failed to fetch requests:', err);
+    }
+  };
+
+  const handleRequestSubmit = async (e?: React.FormEvent, force = false) => {
+    if (e) e.preventDefault();
+    try {
+      const res = await api.createAssetRequest({
+        requested_by: reqRequestedBy,
+        category: reqCategory,
+        department_id: reqDeptId,
+        justification: reqJustification,
+        force
+      });
+
+      if (res.duplicate_warning) {
+        setDuplicateWarning(true);
+        setMatchingAssets(res.matching_assets || []);
+      } else {
+        setReqJustification('');
+        setIsRequestOpen(false);
+        setDuplicateWarning(false);
+        setMatchingAssets([]);
+        loadRequests();
+      }
+    } catch (err) {
+      console.error('Failed to submit asset request:', err);
+    }
+  };
+
+  const handleApproveRequest = async (requestId: number) => {
+    try {
+      await api.approveAssetRequest(requestId);
+      loadRequests();
+      loadAssets();
+    } catch (err) {
+      console.error('Failed to approve request:', err);
+    }
+  };
+
+  const handleRejectRequest = async (requestId: number) => {
+    try {
+      await api.rejectAssetRequest(requestId);
+      loadRequests();
+    } catch (err) {
+      console.error('Failed to reject request:', err);
+    }
+  };
+
   const [qrOrigin, setQrOrigin] = useState(window.location.origin);
 
   useEffect(() => {
     loadAssets();
+    loadRequests();
 
     async function fetchSystemIp() {
       try {
@@ -182,15 +259,28 @@ export default function Assets() {
           <h1 className="text-2xl font-bold tracking-tight text-text">Asset Inventory</h1>
           <p className="text-sm text-text-muted">Register, track, and monitor health scores of organizational resources.</p>
         </div>
-        <button
-          onClick={() => {
-            resetForm();
-            setIsPanelOpen(true);
-          }}
-          className="btn-primary"
-        >
-          <Plus size={16} /> Register Asset
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setIsRequestOpen(true);
+              setDuplicateWarning(false);
+              setMatchingAssets([]);
+            }}
+            className="btn-secondary text-primary border-border-light hover:bg-gray-50 font-semibold text-xs flex items-center gap-1.5 py-2 px-3 shadow-sm"
+          >
+            <Layers size={14} /> Request New Asset
+          </button>
+          
+          <button
+            onClick={() => {
+              resetForm();
+              setIsPanelOpen(true);
+            }}
+            className="btn-primary flex items-center gap-1.5 font-semibold text-xs py-2 px-4 shadow-sm"
+          >
+            <Plus size={16} /> Register Asset
+          </button>
+        </div>
       </div>
 
       {/* Search Filter bar */}
@@ -269,6 +359,85 @@ export default function Assets() {
             No assets found matching search criteria.
           </div>
         )}
+      </div>
+
+      {/* Asset Requests Approval Queue Section */}
+      <div className="card-premium overflow-hidden bg-white space-y-4 p-6 font-sans">
+        <div>
+          <h3 className="text-sm font-bold text-text uppercase tracking-wider">Asset Request approval queue</h3>
+          <p className="text-xs text-text-muted">Review, reject or approve dynamic resource acquisition flows checking duplicate risks.</p>
+        </div>
+
+        <div className="overflow-x-auto -mx-6">
+          <table className="min-w-full divide-y divide-border-light text-left text-xs">
+            <thead className="bg-gray-50 text-text-muted font-bold uppercase">
+              <tr>
+                <th className="px-6 py-3">Requester</th>
+                <th className="px-6 py-3">Category</th>
+                <th className="px-6 py-3">Department</th>
+                <th className="px-6 py-3">Justification</th>
+                <th className="px-6 py-3">Created</th>
+                <th className="px-6 py-3">Alerts</th>
+                <th className="px-6 py-3">Status</th>
+                <th className="px-6 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-light bg-white">
+              {requests.map(req => (
+                <tr key={req.id} className="hover:bg-gray-50/50">
+                  <td className="px-6 py-4 font-semibold text-text">{req.requested_by}</td>
+                  <td className="px-6 py-4 font-medium text-text">{req.category}</td>
+                  <td className="px-6 py-4 text-text-muted font-medium">{req.department_name}</td>
+                  <td className="px-6 py-4 text-text-muted max-w-[180px] truncate" title={req.justification}>
+                    {req.justification}
+                  </td>
+                  <td className="px-6 py-4 font-mono font-medium text-text-muted">{req.created_at}</td>
+                  <td className="px-6 py-4">
+                    {req.duplicate_risk === 1 ? (
+                      <span className="inline-flex items-center gap-1 py-0.5 px-2 text-[9px] font-bold uppercase rounded bg-red-50 text-red-700 border border-red-200 animate-pulse">
+                        <AlertTriangle size={10} /> Duplicate Risk
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-text-muted italic">Clear</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`tag-status ${req.status === 'Approved' ? 'bg-green-50 text-green-700 border-green-200' : req.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                      {req.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    {req.status === 'Pending' ? (
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => handleApproveRequest(req.id)}
+                          className="btn-primary py-1 px-3 text-[10px] font-semibold"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleRejectRequest(req.id)}
+                          className="text-red-600 hover:text-red-700 font-semibold text-[10px]"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[10px] text-text-muted italic">Processed</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {requests.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="px-6 py-6 text-center text-xs text-text-muted font-medium">
+                    No active asset requests logged.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Sliding Side Panel Drawer (Right-aligned) */}
@@ -481,6 +650,172 @@ export default function Assets() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* New Asset Request Dialog Modal */}
+      {isRequestOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setIsRequestOpen(false)}></div>
+          <div className="bg-white rounded shadow-xl border border-border-light w-full max-w-lg overflow-hidden relative z-10 animate-scale-up font-sans">
+            {/* Modal Header */}
+            <div className="h-14 border-b border-border-light flex items-center justify-between px-6 bg-gray-50/50">
+              <h3 className="font-bold text-text text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <Layers size={14} className="text-primary" /> Request New Asset
+              </h3>
+              <button 
+                onClick={() => setIsRequestOpen(false)}
+                className="text-text-muted hover:text-text p-1.5 rounded hover:bg-gray-100 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6">
+              {!duplicateWarning ? (
+                /* Main Request Form */
+                <form id="new-asset-request-form" onSubmit={(e) => handleRequestSubmit(e, false)} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-text-muted">Requested By *</label>
+                    <input
+                      type="text"
+                      required
+                      className="input-premium w-full text-sm"
+                      value={reqRequestedBy}
+                      onChange={(e) => setReqRequestedBy(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-text-muted">Asset Category *</label>
+                      <select
+                        className="input-premium w-full text-sm"
+                        value={reqCategory}
+                        onChange={(e) => setReqCategory(e.target.value)}
+                      >
+                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-text-muted">Target Department *</label>
+                      <select
+                        className="input-premium w-full text-sm"
+                        value={reqDeptId}
+                        onChange={(e) => setReqDeptId(parseInt(e.target.value))}
+                      >
+                        <option value={1}>Marketing</option>
+                        <option value={2}>HR</option>
+                        <option value={3}>Engineering</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-text-muted">Justification / Business Need *</label>
+                    <textarea
+                      required
+                      rows={3}
+                      className="input-premium w-full text-sm"
+                      placeholder="Describe why this asset is required..."
+                      value={reqJustification}
+                      onChange={(e) => setReqJustification(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="p-3 bg-gray-50 border border-border-light rounded text-[11px] text-text-muted leading-relaxed">
+                    <strong>Waste Protection:</strong> Upon submission, the system will search active and idle items matching this category in the database before granting approval routing.
+                  </div>
+                </form>
+              ) : (
+                /* Interrupt Duplicates Warning View */
+                <div className="space-y-5">
+                  <div className="bg-amber-50 border border-amber-200 rounded-[4px] p-4 flex items-start gap-3">
+                    <AlertTriangle size={20} className="text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-sm font-bold text-amber-900">Wait — Idle Assets Already Available!</h4>
+                      <p className="text-xs text-amber-700 leading-relaxed">
+                        We detected <strong>{matchingAssets.length}</strong> matching <strong>{reqCategory}</strong> asset(s) that are currently available or idle in the system. Reallocating an existing asset saves budget and prevents waste.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Matching duplicate list */}
+                  <div className="border border-border-light rounded overflow-hidden max-h-48 overflow-y-auto">
+                    <table className="min-w-full divide-y divide-border-light text-left text-xs">
+                      <thead className="bg-gray-50 text-text-muted font-bold uppercase">
+                        <tr>
+                          <th className="px-4 py-2">Asset Code</th>
+                          <th className="px-4 py-2">Asset Name</th>
+                          <th className="px-4 py-2">Health</th>
+                          <th className="px-4 py-2 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border-light bg-white">
+                        {matchingAssets.map(match => (
+                          <tr key={match.id} className="hover:bg-gray-50/50">
+                            <td className="px-4 py-2.5 font-mono font-semibold text-text">{match.asset_code}</td>
+                            <td className="px-4 py-2.5 font-medium text-text">{match.name}</td>
+                            <td className="px-4 py-2.5 font-semibold text-green-700">{match.health_score}%</td>
+                            <td className="px-4 py-2.5 text-right">
+                              <button
+                                onClick={() => navigate(`/assets/${match.id}`)}
+                                className="btn-secondary text-primary border-primary/20 py-0.5 px-2 text-[10px] hover:bg-primary/5 font-semibold"
+                              >
+                                Allocate This
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <p className="text-xs text-text-muted">
+                    If none of these assets fit the user's specific technical requirements, you can bypass this warning to continue requesting a new unit.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="h-14 border-t border-border-light flex items-center justify-end px-6 gap-2 bg-gray-50/50">
+              {!duplicateWarning ? (
+                <>
+                  <button 
+                    onClick={() => setIsRequestOpen(false)} 
+                    className="btn-secondary py-1.5 px-4 text-xs font-medium"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit" 
+                    form="new-asset-request-form" 
+                    className="btn-primary py-1.5 px-4 text-xs font-semibold"
+                  >
+                    Submit Request
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => setDuplicateWarning(false)} 
+                    className="btn-secondary py-1.5 px-4 text-xs font-medium"
+                  >
+                    Back to Form
+                  </button>
+                  <button 
+                    onClick={() => handleRequestSubmit(undefined, true)} 
+                    className="btn-primary bg-amber-600 hover:bg-amber-700 text-white py-1.5 px-4 text-xs font-semibold"
+                  >
+                    Still Request New (Flags Duplicate Risk)
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}

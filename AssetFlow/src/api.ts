@@ -45,5 +45,9 @@ export const api = {
   getAssetVoice: (id: string) => request(`/assets/${id}/voice`),
   postAssetScanLog: (id: string, locationNote: string, scannedBy: string) => 
     request(`/assets/${id}/scan-log`, { method: 'POST', body: JSON.stringify({ location_note: locationNote, scanned_by: scannedBy }) }),
-  getAssetScanHistory: (id: string) => request(`/assets/${id}/scan-history`)
+  getAssetScanHistory: (id: string) => request(`/assets/${id}/scan-history`),
+  getAssetRequests: () => request('/asset-requests'),
+  createAssetRequest: (data: any) => request('/asset-requests', { method: 'POST', body: JSON.stringify(data) }),
+  approveAssetRequest: (id: number) => request(`/asset-requests/${id}/approve`, { method: 'PATCH' }),
+  rejectAssetRequest: (id: number) => request(`/asset-requests/${id}/reject`, { method: 'PATCH' })
 };
