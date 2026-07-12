@@ -26,6 +26,7 @@ export default function Bookings() {
   // Conflict State
   const [conflictError, setConflictError] = useState<string | null>(null);
   const [suggestedResource, setSuggestedResource] = useState<string | null>(null);
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const loadBookings = async () => {
     try {
@@ -94,6 +95,19 @@ export default function Bookings() {
     e.preventDefault();
     setConflictError(null);
     setSuggestedResource(null);
+
+    // Validate inputs
+    const errors: Record<string, string> = {};
+    if (!formUser.trim()) errors.user = 'Booked-by name is required.';
+    if (!formResource.trim()) errors.resource = 'Please select a resource.';
+    if (!formStart) errors.start = 'Start time is required.';
+    if (!formEnd) errors.end = 'End time is required.';
+    if (formStart && formEnd && formStart >= formEnd) errors.end = 'End time must be after start time.';
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
 
     const formattedStart = formStart.replace('T', ' ');
     const formattedEnd = formEnd.replace('T', ' ');
@@ -396,10 +410,11 @@ export default function Bookings() {
                   <input 
                     type="text" 
                     required 
-                    className="input-premium w-full text-sm" 
+                    className={`input-premium w-full text-sm ${validationErrors.user ? 'border-red-400' : ''}`}
                     value={formUser}
                     onChange={(e) => setFormUser(e.target.value)}
                   />
+                  {validationErrors.user && <p className="text-[10px] text-red-500 font-semibold mt-0.5">{validationErrors.user}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -422,11 +437,12 @@ export default function Bookings() {
                     <input 
                       type="text" 
                       required 
-                      className="input-premium w-full text-sm" 
+                      className={`input-premium w-full text-sm ${validationErrors.resource ? 'border-red-400' : ''}`}
                       value={formResource}
                       onChange={(e) => setFormResource(e.target.value)}
                       placeholder="e.g. Meeting Room B"
                     />
+                    {validationErrors.resource && <p className="text-[10px] text-red-500 font-semibold mt-0.5">{validationErrors.resource}</p>}
                   </div>
                 </div>
 
@@ -435,10 +451,11 @@ export default function Bookings() {
                   <input 
                     type="datetime-local" 
                     required 
-                    className="input-premium w-full text-sm font-mono" 
+                    className={`input-premium w-full text-sm font-mono ${validationErrors.start ? 'border-red-400' : ''}`}
                     value={formStart}
                     onChange={(e) => setFormStart(e.target.value)}
                   />
+                  {validationErrors.start && <p className="text-[10px] text-red-500 font-semibold mt-0.5">{validationErrors.start}</p>}
                 </div>
 
                 <div className="space-y-1">
@@ -446,10 +463,11 @@ export default function Bookings() {
                   <input 
                     type="datetime-local" 
                     required 
-                    className="input-premium w-full text-sm font-mono" 
+                    className={`input-premium w-full text-sm font-mono ${validationErrors.end ? 'border-red-400' : ''}`}
                     value={formEnd}
                     onChange={(e) => setFormEnd(e.target.value)}
                   />
+                  {validationErrors.end && <p className="text-[10px] text-red-500 font-semibold mt-0.5">{validationErrors.end}</p>}
                 </div>
               </form>
             </div>

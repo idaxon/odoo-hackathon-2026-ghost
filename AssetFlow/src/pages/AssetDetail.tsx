@@ -95,6 +95,7 @@ export default function AssetDetail() {
   const [reportName, setReportName] = useState('Public Reporter');
   const [reportPriority, setReportPriority] = useState<'Low' | 'Medium' | 'High' | 'Critical'>('Medium');
   const [reportDescription, setReportDescription] = useState('');
+  const [reportValidationErrors, setReportValidationErrors] = useState<Record<string, string>>({});
 
   // Location Tracking State
   const [scanHistory, setScanHistory] = useState<ScanLog[]>([]);
@@ -339,6 +340,16 @@ export default function AssetDetail() {
     e.preventDefault();
     if (!asset) return;
 
+    const errors: Record<string, string> = {};
+    if (!reportName.trim()) errors.name = 'Reporter name is required.';
+    if (!reportDescription.trim()) errors.desc = 'Issue description is required.';
+    if (reportDescription.trim().length > 0 && reportDescription.trim().length < 10) errors.desc = 'Description must be at least 10 characters.';
+    if (Object.keys(errors).length > 0) {
+      setReportValidationErrors(errors);
+      return;
+    }
+    setReportValidationErrors({});
+
     try {
       await api.createMaintenanceRequest({
         asset_id: asset.id,
@@ -350,7 +361,7 @@ export default function AssetDetail() {
       setReportDescription('');
       setReportName('Public Reporter');
       if (id) {
-        loadAssetDetail(id); // Reload updated asset condition
+        loadAssetDetail(id);
       }
     } catch (err) {
       console.error('Failed to submit maintenance request:', err);
@@ -1063,10 +1074,11 @@ export default function AssetDetail() {
                   <input 
                     type="text" 
                     required 
-                    className="input-premium w-full text-sm" 
+                    className={`input-premium w-full text-sm ${reportValidationErrors.name ? 'border-red-400' : ''}`}
                     value={reportName}
                     onChange={(e) => setReportName(e.target.value)}
                   />
+                  {reportValidationErrors.name && <p className="text-[10px] text-red-500 font-semibold mt-0.5">{reportValidationErrors.name}</p>}
                 </div>
 
                 <div className="space-y-1">
@@ -1088,11 +1100,12 @@ export default function AssetDetail() {
                   <textarea 
                     required 
                     rows={4}
-                    className="input-premium w-full text-sm" 
+                    className={`input-premium w-full text-sm ${reportValidationErrors.desc ? 'border-red-400' : ''}`}
                     placeholder="Explain what is failing, compressor noise, screen flicker, leak, etc..."
                     value={reportDescription}
                     onChange={(e) => setReportDescription(e.target.value)}
                   />
+                  {reportValidationErrors.desc && <p className="text-[10px] text-red-500 font-semibold mt-0.5">{reportValidationErrors.desc}</p>}
                 </div>
 
                 <div className="p-3 bg-red-50 border border-red-100 rounded text-[11px] text-red-700 flex items-start gap-1.5 leading-relaxed">

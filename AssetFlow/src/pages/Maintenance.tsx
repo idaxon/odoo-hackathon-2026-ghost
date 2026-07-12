@@ -39,6 +39,7 @@ export default function Maintenance() {
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [scannedCode, setScannedCode] = useState('');
   const [verifyStatus, setVerifyStatus] = useState<'none' | 'success' | 'fail'>('none');
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const loadRequests = async () => {
     try {
@@ -74,6 +75,15 @@ export default function Maintenance() {
     e.preventDefault();
     if (!selectedTicket) return;
 
+    const errors: Record<string, string> = {};
+    if (!resolutionNotes.trim()) errors.notes = 'Resolution notes are required.';
+    if (verifyStatus !== 'success') errors.scan = 'Please verify the asset QR code before completing.';
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
+
     try {
       await api.resolveMaintenanceRequest(selectedTicket.id, {
         resolution_notes: resolutionNotes,
@@ -107,7 +117,17 @@ export default function Maintenance() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedAssetId) return;
+
+    const errors: Record<string, string> = {};
+    if (!selectedAssetId) errors.asset = 'Please select an asset.';
+    if (!formRaisedBy.trim()) errors.raisedBy = 'Reporter name is required.';
+    if (!formDesc.trim()) errors.desc = 'Issue description is required.';
+    if (formDesc.trim().length > 0 && formDesc.trim().length < 10) errors.desc = 'Description must be at least 10 characters.';
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+    setValidationErrors({});
 
     try {
       const payload = {
@@ -296,7 +316,7 @@ export default function Maintenance() {
                   <label className="text-xs font-semibold text-text-muted font-medium">Faulty Asset *</label>
                   <select 
                     required
-                    className="input-premium w-full text-sm"
+                    className={`input-premium w-full text-sm ${validationErrors.asset ? 'border-red-400' : ''}`}
                     value={selectedAssetId}
                     onChange={(e) => setSelectedAssetId(Number(e.target.value))}
                   >
@@ -306,6 +326,7 @@ export default function Maintenance() {
                       </option>
                     ))}
                   </select>
+                  {validationErrors.asset && <p className="text-[10px] text-red-500 font-semibold mt-0.5">{validationErrors.asset}</p>}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -314,10 +335,11 @@ export default function Maintenance() {
                     <input 
                       type="text" 
                       required 
-                      className="input-premium w-full text-sm" 
+                      className={`input-premium w-full text-sm ${validationErrors.raisedBy ? 'border-red-400' : ''}`}
                       value={formRaisedBy}
                       onChange={(e) => setFormRaisedBy(e.target.value)}
                     />
+                    {validationErrors.raisedBy && <p className="text-[10px] text-red-500 font-semibold mt-0.5">{validationErrors.raisedBy}</p>}
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-text-muted font-medium">Priority *</label>
@@ -340,10 +362,11 @@ export default function Maintenance() {
                     required 
                     rows={4}
                     placeholder="Describe the failure symptoms, temperature errors, leaks or noise issues..."
-                    className="input-premium w-full text-sm" 
+                    className={`input-premium w-full text-sm ${validationErrors.desc ? 'border-red-400' : ''}`}
                     value={formDesc}
                     onChange={(e) => setFormDesc(e.target.value)}
                   />
+                  {validationErrors.desc && <p className="text-[10px] text-red-500 font-semibold mt-0.5">{validationErrors.desc}</p>}
                 </div>
 
                 <div className="p-3 bg-red-50 border border-red-100 rounded text-[11px] text-red-700 flex items-start gap-1.5 leading-relaxed">
@@ -407,19 +430,20 @@ export default function Maintenance() {
                   <textarea
                     required
                     rows={3}
-                    className="input-premium w-full text-sm"
+                    className={`input-premium w-full text-sm ${validationErrors.notes ? 'border-red-400' : ''}`}
                     placeholder="e.g. Cleared paper jam, replaced roller, ran test sheets..."
                     value={resolutionNotes}
                     onChange={(e) => setResolutionNotes(e.target.value)}
                   />
+                  {validationErrors.notes && <p className="text-[10px] text-red-500 font-semibold mt-0.5">{validationErrors.notes}</p>}
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-text-muted">Confirm Asset QR Verification (Optional)</label>
+                  <label className="text-xs font-semibold text-text-muted">Confirm Asset QR Verification *</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      className="input-premium flex-1 text-sm font-mono"
+                      className={`input-premium flex-1 text-sm font-mono ${validationErrors.scan ? 'border-red-400' : ''}`}
                       placeholder="Scan or type Asset ID code..."
                       value={scannedCode}
                       onChange={(e) => handleCodeChange(e.target.value)}
@@ -442,6 +466,9 @@ export default function Maintenance() {
                     <p className="text-[10px] font-semibold text-red-600 flex items-center gap-1 mt-1">
                       <AlertCircle size={12} /> Warning: Scanned code does not match ticket asset code ({selectedTicket.asset_code}).
                     </p>
+                  )}
+                  {validationErrors.scan && verifyStatus !== 'fail' && (
+                    <p className="text-[10px] text-red-500 font-semibold mt-0.5">{validationErrors.scan}</p>
                   )}
                 </div>
 
