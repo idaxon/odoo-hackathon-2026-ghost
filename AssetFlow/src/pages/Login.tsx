@@ -52,33 +52,42 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-100 flex items-center justify-center p-4 sm:p-6 lg:p-10 font-sans relative overflow-hidden">
+    <div className="min-h-screen w-full bg-slate-50 flex items-center justify-center p-4 sm:p-6 lg:p-10 font-sans relative overflow-hidden">
       
-      {/* Dynamic blurred colored blobs in the background to match Payoneer layout styling */}
-      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-[#714B67]/10 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-[#017E84]/15 rounded-full blur-[100px] pointer-events-none"></div>
+      {/* Blurred background blobs matching website color scheme (#714B67 and #017E84) */}
+      <div className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-[#714B67]/8 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] bg-[#017E84]/12 rounded-full blur-[120px] pointer-events-none"></div>
+      <div className="absolute top-[35%] left-[25%] w-[400px] h-[400px] bg-[#017E84]/8 rounded-full blur-[100px] pointer-events-none"></div>
 
-      {/* Main suspeneded container with large rounded corners matching the design */}
-      <div className="max-w-5xl w-full bg-white rounded-[32px] shadow-2xl border border-white/40 overflow-hidden flex flex-col md:flex-row min-h-[580px] lg:min-h-[640px] z-10">
+      {/* Main glassmorphism container with drop shadow & blurred white borders */}
+      <div className="max-w-5xl w-full bg-white/75 backdrop-blur-xl rounded-[40px] shadow-[0_20px_50px_rgba(0,0,0,0.12)] border border-white/40 overflow-hidden flex flex-col md:flex-row min-h-[580px] lg:min-h-[640px] z-10 animate-appear">
         
-        {/* Left Side: Illustrative device & copy column (Plum brand background) */}
-        <div className="w-full md:w-5/12 bg-[#714B67] text-white p-8 lg:p-10 flex flex-col justify-between relative overflow-hidden">
+        {/* Left Side: Illustrative device & copy column (Plum brand background with concentric rings) */}
+        <div className="w-full md:w-5/12 bg-gradient-to-b from-[#714B67] to-[#51364a] text-white p-8 lg:p-10 flex flex-col justify-between relative overflow-hidden">
           
+          {/* Faint concentric circular guide rings in the background matching the photo */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+            <div className="w-[240px] h-[240px] rounded-full border border-white/5 animate-pulse"></div>
+            <div className="absolute w-[360px] h-[360px] rounded-full border border-white/5"></div>
+            <div className="absolute w-[480px] h-[480px] rounded-full border border-white/5"></div>
+            <div className="absolute w-[600px] h-[600px] rounded-full border border-white/5"></div>
+          </div>
+
           {/* Top text tagline */}
           <div className="z-10">
-            <p className="text-white/50 text-[10px] tracking-wider uppercase font-semibold">
+            <p className="text-white/55 text-[10px] tracking-wider uppercase font-semibold">
               Global assets made simple — online asset solutions.
             </p>
           </div>
 
           {/* Central Title & Phone Mockup */}
-          <div className="z-10 my-auto py-6 space-y-8 flex flex-col items-center md:items-start">
+          <div className="z-10 my-auto py-6 space-y-10 flex flex-col items-center md:items-start w-full">
             <h1 className="text-3xl lg:text-4xl font-extrabold leading-tight tracking-tight text-center md:text-left">
               Optimize <br />your assets
             </h1>
 
             {/* Premium iPhone-style device frame in CSS */}
-            <div className="relative w-56 h-[300px] bg-slate-950 rounded-[30px] border-[3.5px] border-slate-800 shadow-2xl p-3 overflow-hidden select-none animate-appear self-center">
+            <div className="relative w-56 h-[300px] bg-slate-950 rounded-[30px] border-[3.5px] border-slate-800 shadow-[0_25px_60px_rgba(0,0,0,0.4)] p-3 overflow-hidden select-none self-center">
               
               {/* Dynamic island notch */}
               <div className="absolute top-2 left-1/2 -translate-x-1/2 w-20 h-3.5 bg-slate-800 rounded-full flex items-center justify-center z-20">
@@ -89,7 +98,7 @@ export default function Login() {
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/10 pointer-events-none z-10"></div>
 
               {/* Smartphone screen interface */}
-              <div className="h-full flex flex-col justify-between pt-4 text-[9px] space-y-2 relative">
+              <div className="h-full flex flex-col justify-between pt-4 text-[9px] space-y-2 relative z-10">
                 {/* Header status */}
                 <div className="flex justify-between items-center text-white/40 px-1 font-mono text-[7px]">
                   <span>9:41 AM</span>
@@ -149,14 +158,10 @@ export default function Login() {
             <span>© 2006-2026 AssetFlow Inc.</span>
             <div className="w-1.5 h-1.5 rounded-full bg-[#017E84] animate-pulse"></div>
           </div>
-
-          {/* Decorative background shapes */}
-          <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-white/5 border border-white/5 pointer-events-none"></div>
-          <div className="absolute top-[-5%] right-[-10%] w-60 h-60 rounded-full bg-white/5 border border-white/5 pointer-events-none"></div>
         </div>
 
-        {/* Right Side: Sign-in input forms (White background) */}
-        <div className="w-full md:w-7/12 bg-white p-8 lg:p-12 flex flex-col justify-between">
+        {/* Right Side: Sign-in input forms (Translucent overlay background) */}
+        <div className="w-full md:w-7/12 bg-white/60 p-8 lg:p-12 flex flex-col justify-between">
           
           {/* Header row: Brand logo left, status info right */}
           <div className="flex justify-between items-center w-full">
@@ -198,7 +203,7 @@ export default function Login() {
                   type="email"
                   required
                   placeholder="Email or Username"
-                  className="input-premium w-full py-2 px-4 rounded-full text-xs border-border-medium focus:border-primary transition-all focus:ring-1 focus:ring-primary shadow-xs"
+                  className="input-premium w-full py-2 px-4 rounded-full text-xs border-border-medium focus:border-primary transition-all focus:ring-1 focus:ring-primary shadow-xs bg-white/80"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -210,7 +215,7 @@ export default function Login() {
                   type={showPassword ? 'text' : 'password'}
                   required
                   placeholder="Password"
-                  className="input-premium w-full py-2 px-4 rounded-full text-xs border-border-medium pr-10 focus:border-primary transition-all focus:ring-1 focus:ring-primary shadow-xs"
+                  className="input-premium w-full py-2 px-4 rounded-full text-xs border-border-medium pr-10 focus:border-primary transition-all focus:ring-1 focus:ring-primary shadow-xs bg-white/80"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
@@ -264,12 +269,12 @@ export default function Login() {
               <button
                 type="button"
                 onClick={handleQuickLogin}
-                className="w-full bg-gray-50 border border-border-light text-text hover:bg-gray-100 py-1.5 px-4 rounded-full text-[10px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
+                className="w-full bg-white/80 border border-border-light text-text hover:bg-gray-100 py-1.5 px-4 rounded-full text-[10px] font-bold transition-all flex items-center justify-center gap-1 shadow-sm cursor-pointer"
               >
                 <Sparkles size={11} className="text-primary" />
                 <span>One-Click Login as Admin</span>
               </button>
-              <div className="text-[9px] text-text-muted font-medium bg-gray-50 p-2.5 rounded-lg border border-border-light leading-relaxed flex items-start gap-1">
+              <div className="text-[9px] text-text-muted font-medium bg-gray-50/80 p-2.5 rounded-lg border border-border-light leading-relaxed flex items-start gap-1">
                 <Shield size={12} className="text-[#017E84] flex-shrink-0 mt-0.5" />
                 <span className="text-left">
                   Credentials: <code>admin@assetflow.com</code> / <code>admin</code>. Physical code scans bypass this view automatically.
