@@ -38,6 +38,18 @@ export default function Dashboard() {
 
   // Dynamic activity logs synced with LocalStorage
   const [activityLogs, setActivityLogs] = useState<string[]>([]);
+  const [dashboardQuery, setDashboardQuery] = useState('');
+
+  const handleAskAI = (qText: string) => {
+    window.dispatchEvent(new CustomEvent('open-ai-chat', { detail: { query: qText } }));
+  };
+
+  const handleQuerySubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dashboardQuery.trim()) return;
+    handleAskAI(dashboardQuery);
+    setDashboardQuery('');
+  };
 
   useEffect(() => {
     const savedLogs = localStorage.getItem('assetflow_activity_log');
@@ -73,26 +85,78 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Today's AI Brief (Focal Point Card) */}
-      <div className="card-premium p-6 space-y-4 border-l-4 border-l-primary shadow-sm bg-white">
-        <div className="flex items-center gap-2 pb-2 border-b border-border-light">
-          <Sparkles size={16} className="text-primary animate-pulse" />
-          <h2 className="text-base font-bold text-text m-0">Today's AI Brief</h2>
-        </div>
+      {/* AI Brief & AI Copilot Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <div className="space-y-3">
-          {insights.map((insight) => (
-            <div 
-              key={insight.id} 
-              className={`p-3.5 rounded-[4px] text-sm text-text font-medium flex items-center justify-between ${insight.borderClass}`}
-            >
-              <span>{insight.text}</span>
-              <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted px-2 py-0.5 bg-white border border-border-light rounded-[4px]">
-                {insight.type}
-              </span>
+        {/* Today's AI Brief (Focal Point Card - takes 2/3 width on desktop) */}
+        <div className="card-premium p-6 space-y-4 border-l-4 border-l-primary shadow-sm bg-white lg:col-span-2 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center gap-2 pb-2 border-b border-border-light mb-3">
+              <Sparkles size={16} className="text-primary animate-pulse" />
+              <h2 className="text-base font-bold text-text m-0">Today's AI Brief</h2>
             </div>
-          ))}
+            
+            <div className="space-y-3">
+              {insights.map((insight) => (
+                <div 
+                  key={insight.id} 
+                  className={`p-3.5 rounded-[4px] text-sm text-text font-medium flex items-center justify-between ${insight.borderClass}`}
+                >
+                  <span>{insight.text}</span>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted px-2 py-0.5 bg-white border border-border-light rounded-[4px]">
+                    {insight.type}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
+
+        {/* Ask AI Copilot Search Card (takes 1/3 width on desktop) */}
+        <div className="card-premium p-6 border-l-4 border-l-secondary bg-white flex flex-col justify-between shadow-sm">
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 pb-2 border-b border-border-light">
+              <Sparkles size={16} className="text-secondary animate-pulse" />
+              <h2 className="text-base font-bold text-text m-0">Ask AI Copilot</h2>
+            </div>
+            <p className="text-xs text-text-muted leading-relaxed">
+              Ask about budget waste, projector availability, equipment replacements, or maintenance schedule.
+            </p>
+            
+            {/* Suggestions prompt chips */}
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              <button 
+                onClick={() => handleAskAI('What is wasting budget?')}
+                className="bg-gray-50 border border-border-light hover:bg-gray-100 hover:border-border-medium text-text text-[10px] py-1 px-2 rounded-[4px] font-semibold transition-colors cursor-pointer"
+              >
+                Wasting budget?
+              </button>
+              <button 
+                onClick={() => handleAskAI('Find an available projector')}
+                className="bg-gray-50 border border-border-light hover:bg-gray-100 hover:border-border-medium text-text text-[10px] py-1 px-2 rounded-[4px] font-semibold transition-colors cursor-pointer"
+              >
+                Available projector?
+              </button>
+            </div>
+          </div>
+
+          <form onSubmit={handleQuerySubmit} className="flex gap-2 pt-4">
+            <input 
+              type="text" 
+              placeholder="Ask AssetFlow AI..." 
+              className="input-premium flex-1 text-xs py-1.5 px-3"
+              value={dashboardQuery}
+              onChange={(e) => setDashboardQuery(e.target.value)}
+            />
+            <button 
+              type="submit" 
+              className="btn-primary py-1.5 px-3 rounded-[6px]"
+            >
+              Ask
+            </button>
+          </form>
+        </div>
+
       </div>
 
       {/* Action Buttons Row */}

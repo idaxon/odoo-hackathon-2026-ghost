@@ -1,10 +1,11 @@
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
+import AIAssistant from './AIAssistant';
 
 export default function Layout() {
   return (
-    <div className="min-h-screen bg-bg text-text">
+    <div className="min-h-screen bg-bg text-text relative">
       {/* Sidebar Nav */}
       <Sidebar />
 
@@ -18,6 +19,9 @@ export default function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Floating AI Assistant Widget */}
+      <AIAssistant />
     </div>
   );
 }
