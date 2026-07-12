@@ -6,11 +6,13 @@ import AssetDetail from './pages/AssetDetail';
 import Bookings from './pages/Bookings';
 import Maintenance from './pages/Maintenance';
 import Reports from './pages/Reports';
+import Login from './pages/Login';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="login" element={<Login />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="assets" element={<Assets />} />

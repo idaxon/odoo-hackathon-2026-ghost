@@ -196,6 +196,12 @@ http://localhost:5173
 
 Follow these steps to experience every feature in under 5 minutes:
 
+### Step 0: Administrative Sign In (Auth Gateway)
+1. Open the application. You are automatically presented with the secure **AssetFlow Login Page**.
+2. Review the autocomplete-friendly layout. Enter the default administrator email `admin@assetflow.com` and password `admin`, or simply click **One-Click Login as Admin**.
+3. Click **Sign In**. On success, the secure cookie/storage session initializes and redirects you to the AI Briefs dashboard page.
+4. Try clicking the **Sign Out** (Log Out) button in the bottom sidebar tray to return to the gateway, then log back in to continue the demo.
+
 ### Step 1: Duplicate Prevention (Assets Page)
 1. Navigate to the **Assets** tab → Click **Request New Asset**
 2. Select **Printer** category → Click **Submit Request**

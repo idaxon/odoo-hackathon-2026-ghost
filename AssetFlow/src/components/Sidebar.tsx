@@ -4,7 +4,8 @@ import {
   Package, 
   Calendar, 
   Wrench, 
-  BarChart2
+  BarChart2,
+  LogOut
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -50,14 +51,26 @@ export default function Sidebar() {
       </nav>
 
       {/* User Session Info / Sidebar Footer */}
-      <div className="p-4 border-t border-white/10 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center font-bold text-xs text-white">
-          DM
+      <div className="p-4 border-t border-white/10 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center font-bold text-xs text-white flex-shrink-0">
+            DM
+          </div>
+          <div className="truncate">
+            <p className="text-xs font-semibold truncate">Daksh Mishra</p>
+            <p className="text-[10px] text-white/50 truncate">BML Munjal University</p>
+          </div>
         </div>
-        <div className="truncate">
-          <p className="text-xs font-semibold truncate">Daksh Mishra</p>
-          <p className="text-[10px] text-white/50 truncate">BML Munjal University</p>
-        </div>
+        <button
+          onClick={() => {
+            localStorage.removeItem('isAuthenticated');
+            window.location.href = '/login';
+          }}
+          className="text-white/60 hover:text-white hover:bg-white/10 p-1.5 rounded transition-all cursor-pointer flex-shrink-0"
+          title="Sign Out"
+        >
+          <LogOut size={16} />
+        </button>
       </div>
     </aside>
   );

@@ -1,4 +1,4 @@
-import { Outlet, useSearchParams } from 'react-router-dom';
+import { Outlet, useSearchParams, Navigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import AIAssistant from './AIAssistant';
@@ -6,6 +6,11 @@ import AIAssistant from './AIAssistant';
 export default function Layout() {
   const [searchParams] = useSearchParams();
   const isScanned = searchParams.get('scan') === 'true';
+  const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
+
+  if (!isAuthenticated && !isScanned) {
+    return <Navigate to={`/login?${searchParams.toString()}`} replace />;
+  }
 
   return (
     <div className="min-h-screen bg-bg text-text relative">
