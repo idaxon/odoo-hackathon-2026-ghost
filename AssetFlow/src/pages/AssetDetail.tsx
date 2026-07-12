@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Cpu, Smartphone, Monitor, HardDrive, Sparkles, AlertCircle, Wrench, Battery, X, User, CheckCircle2 } from 'lucide-react';
 import { api } from '../api';
+import { QRCodeCanvas } from 'qrcode.react';
 
 interface TimelineStep {
   label: string;
@@ -215,6 +216,40 @@ export default function AssetDetail() {
               <span className={`tag-status mt-0.5 border ${asset.status === 'In Use' ? 'bg-blue-50 text-blue-700 border-blue-200' : asset.status === 'Available' ? 'bg-green-50 text-green-700 border-green-200' : asset.status === 'Maintenance' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-gray-100 text-gray-700 border-gray-200'}`}>
                 {asset.status === 'In Use' ? 'Allocated' : asset.status}
               </span>
+            </div>
+          </div>
+
+          {/* Asset QR Code Block */}
+          <div className="border-t border-border-light pt-6 flex flex-col sm:flex-row items-center gap-4 justify-between">
+            <div className="space-y-1 text-center sm:text-left">
+              <h4 className="text-xs font-bold text-text uppercase tracking-wider">Asset QR Node</h4>
+              <p className="text-[11px] text-text-muted leading-relaxed max-w-[200px]">Scan from mobile device on same network to sync twin data instantly.</p>
+              <button 
+                onClick={() => {
+                  const canvas = document.getElementById('twin-qr-canvas') as HTMLCanvasElement;
+                  if (canvas) {
+                    const pngUrl = canvas.toDataURL('image/png').replace('image/png', 'image/octet-stream');
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = pngUrl;
+                    downloadLink.download = `QR-${asset.asset_code}.png`;
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                  }
+                }}
+                className="btn-secondary py-1 px-2.5 text-[10px] mt-2 font-semibold flex items-center gap-1.5 bg-gray-50 border-border-light hover:bg-gray-100"
+              >
+                Download QR Code
+              </button>
+            </div>
+            <div className="bg-white p-2 border border-border-light rounded shadow-sm flex-shrink-0">
+              <QRCodeCanvas
+                id="twin-qr-canvas"
+                value={`${window.location.origin}/assets/${asset.asset_code}`}
+                size={84}
+                level="M"
+                includeMargin={true}
+              />
             </div>
           </div>
         </div>
