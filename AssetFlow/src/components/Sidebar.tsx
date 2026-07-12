@@ -4,8 +4,7 @@ import {
   Package, 
   Calendar, 
   Wrench, 
-  BarChart2, 
-  Layers 
+  BarChart2
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -21,8 +20,8 @@ export default function Sidebar() {
     <aside className="w-60 h-screen fixed top-0 left-0 bg-primary text-white flex flex-col z-30">
       {/* Brand Logo Container */}
       <div className="h-16 flex items-center px-6 border-b border-white/10 gap-2.5">
-        <div className="bg-white/10 p-1.5 rounded">
-          <Layers size={20} className="text-[#017E84]" />
+        <div className="bg-white/10 p-1 rounded flex items-center justify-center">
+          <img src="/logo-icon.svg" className="w-6 h-6 object-contain" alt="af" />
         </div>
         <span className="text-lg font-bold tracking-tight">AssetFlow</span>
       </div>
