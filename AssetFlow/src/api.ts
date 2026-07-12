@@ -1,4 +1,5 @@
-const BASE_URL = 'http://localhost:3001/api';
+const hostname = window.location.hostname;
+const BASE_URL = `http://${hostname}:3001/api`;
 
 async function request(path: string, options?: RequestInit) {
   const res = await fetch(`${BASE_URL}${path}`, {
