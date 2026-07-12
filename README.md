@@ -93,3 +93,14 @@ Follow these steps to demonstrate the full capabilities of AssetFlow:
 3. The booking is blocked, showing a warning: *"Schedule conflict detected!"*.
 4. The system automatically recommends an available alternative resource (e.g., *"Meeting Room B"*).
 5. Click the green **Book Instead** button to schedule the slot instantly.
+
+### Step 4: Maintenance QR Verification & Timeline Handoff (Maintenance Page)
+1. Navigate to the **Maintenance** tab.
+2. Click **Resolve Issue** on any open ticket (e.g. *HP LaserJet paper jam*).
+3. **The Resolve Ticket Modal appears**:
+   - Enter resolution notes (e.g., *"Cleaned roller, replaced toner"*).
+   - Enter or click **Simulate Scan** to verify the asset's QR code.
+   - The scanner instantly matches the code and shows a green check mark confirming the match.
+4. Click **Complete Resolution** to submit.
+5. Go back to the **Assets** detail page for that HP LaserJet: the **Lifecycle Timeline** at the bottom now displays a dynamic **"Maintenance"** event step containing the exact date, raised reporter, and your custom resolution notes!
+
