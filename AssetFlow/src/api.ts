@@ -39,5 +39,6 @@ export const api = {
   getAIIdleAssets: () => request('/ai/idle-assets'),
   getAIReplaceCandidates: () => request('/ai/replace-candidates'),
   getAIAvailableCategory: (category: string) => request(`/ai/available/${category}`),
-  getAIMaintenanceToday: () => request('/ai/maintenance-today')
+  getAIMaintenanceToday: () => request('/ai/maintenance-today'),
+  getSystemIp: () => request('/system/ip')
 };

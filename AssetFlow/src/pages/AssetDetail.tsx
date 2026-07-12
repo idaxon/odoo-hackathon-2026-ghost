@@ -38,6 +38,7 @@ export default function AssetDetail() {
   // Load States
   const [loading, setLoading] = useState(true);
   const [asset, setAsset] = useState<AssetDetailData | null>(null);
+  const [qrOrigin, setQrOrigin] = useState(window.location.origin);
 
   // Allocation Drawer State
   const [isAllocOpen, setIsAllocOpen] = useState(false);
@@ -77,6 +78,20 @@ export default function AssetDetail() {
     if (id) {
       loadAssetDetail(id);
     }
+
+    async function fetchSystemIp() {
+      try {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          const res = await api.getSystemIp();
+          if (res && res.ip && res.ip !== '127.0.0.1') {
+            setQrOrigin(`http://${res.ip}:${window.location.port}`);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to get system IP:', err);
+      }
+    }
+    fetchSystemIp();
   }, [id]);
 
   const handleAllocateOrTransfer = async (e: React.FormEvent) => {
@@ -245,7 +260,7 @@ export default function AssetDetail() {
             <div className="bg-white p-2 border border-border-light rounded shadow-sm flex-shrink-0">
               <QRCodeCanvas
                 id="twin-qr-canvas"
-                value={`${window.location.origin}/assets/${asset.asset_code}`}
+                value={`${qrOrigin}/assets/${asset.asset_code}`}
                 size={84}
                 level="M"
                 includeMargin={true}

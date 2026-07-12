@@ -49,8 +49,24 @@ export default function Assets() {
     }
   };
 
+  const [qrOrigin, setQrOrigin] = useState(window.location.origin);
+
   useEffect(() => {
     loadAssets();
+
+    async function fetchSystemIp() {
+      try {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          const res = await api.getSystemIp();
+          if (res && res.ip && res.ip !== '127.0.0.1') {
+            setQrOrigin(`http://${res.ip}:${window.location.port}`);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to get system IP:', err);
+      }
+    }
+    fetchSystemIp();
   }, []);
 
   const getStatusStyle = (status: Asset['status']) => {
@@ -166,11 +182,11 @@ export default function Assets() {
           <h1 className="text-2xl font-bold tracking-tight text-text">Asset Inventory</h1>
           <p className="text-sm text-text-muted">Register, track, and monitor health scores of organizational resources.</p>
         </div>
-        <button 
+        <button
           onClick={() => {
             resetForm();
             setIsPanelOpen(true);
-          }} 
+          }}
           className="btn-primary"
         >
           <Plus size={16} /> Register Asset
@@ -216,8 +232,8 @@ export default function Assets() {
               ))
             ) : (
               filteredAssets.map((asset) => (
-                <tr 
-                  key={asset.id} 
+                <tr
+                  key={asset.id}
                   className="hover:bg-gray-50/50 transition-colors cursor-pointer"
                   onClick={() => navigate(`/assets/${asset.id}`)}
                 >
@@ -259,8 +275,8 @@ export default function Assets() {
       {isPanelOpen && (
         <div className="fixed inset-0 z-50 flex justify-end">
           {/* Backdrop overlay */}
-          <div 
-            className="absolute inset-0 bg-black/30 transition-opacity" 
+          <div
+            className="absolute inset-0 bg-black/30 transition-opacity"
             onClick={() => setIsPanelOpen(false)}
           ></div>
 
@@ -271,8 +287,8 @@ export default function Assets() {
               <h3 className="font-bold text-text text-base">
                 {registeredAsset ? 'Registration Confirmed' : 'Register New Asset'}
               </h3>
-              <button 
-                onClick={() => setIsPanelOpen(false)} 
+              <button
+                onClick={() => setIsPanelOpen(false)}
                 className="text-text-muted hover:text-text p-1.5 rounded hover:bg-gray-100 transition-colors"
               >
                 <X size={16} />
@@ -286,10 +302,10 @@ export default function Assets() {
                 <form id="asset-register-form" onSubmit={handleSubmit} className="space-y-4">
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-text-muted">Asset Name *</label>
-                    <input 
-                      type="text" 
-                      required 
-                      className="input-premium w-full" 
+                    <input
+                      type="text"
+                      required
+                      className="input-premium w-full"
                       value={formName}
                       onChange={(e) => setFormName(e.target.value)}
                       placeholder="e.g. Dell Latitude 7440"
@@ -299,8 +315,8 @@ export default function Assets() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-text-muted">Category *</label>
-                      <select 
-                        className="input-premium w-full text-sm" 
+                      <select
+                        className="input-premium w-full text-sm"
                         value={formCategory}
                         onChange={(e) => setFormCategory(e.target.value)}
                       >
@@ -309,8 +325,8 @@ export default function Assets() {
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-text-muted">Department *</label>
-                      <select 
-                        className="input-premium w-full text-sm" 
+                      <select
+                        className="input-premium w-full text-sm"
                         value={formDepartment}
                         onChange={(e) => setFormDepartment(e.target.value)}
                       >
@@ -322,18 +338,18 @@ export default function Assets() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-text-muted">Purchase Date</label>
-                      <input 
-                        type="date" 
-                        className="input-premium w-full text-sm" 
+                      <input
+                        type="date"
+                        className="input-premium w-full text-sm"
                         value={formPurchaseDate}
                         onChange={(e) => setFormPurchaseDate(e.target.value)}
                       />
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-semibold text-text-muted">Cost (INR)</label>
-                      <input 
-                        type="number" 
-                        className="input-premium w-full text-sm" 
+                      <input
+                        type="number"
+                        className="input-premium w-full text-sm"
                         value={formPurchaseCost}
                         placeholder="e.g. 85000"
                         onChange={(e) => setFormPurchaseCost(e.target.value)}
@@ -343,9 +359,9 @@ export default function Assets() {
 
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-text-muted">Vendor Partner</label>
-                    <input 
-                      type="text" 
-                      className="input-premium w-full text-sm" 
+                    <input
+                      type="text"
+                      className="input-premium w-full text-sm"
                       value={formVendor}
                       placeholder="e.g. Dell Direct Service"
                       onChange={(e) => setFormVendor(e.target.value)}
@@ -354,9 +370,9 @@ export default function Assets() {
 
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-text-muted">Serial Number / Asset Tag</label>
-                    <input 
-                      type="text" 
-                      className="input-premium w-full text-sm font-mono" 
+                    <input
+                      type="text"
+                      className="input-premium w-full text-sm font-mono"
                       value={formSerial}
                       placeholder="e.g. SN-8291A-09"
                       onChange={(e) => setFormSerial(e.target.value)}
@@ -365,9 +381,9 @@ export default function Assets() {
 
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-text-muted">Warranty Expiration Date</label>
-                    <input 
-                      type="date" 
-                      className="input-premium w-full text-sm" 
+                    <input
+                      type="date"
+                      className="input-premium w-full text-sm"
                       value={formWarranty}
                       onChange={(e) => setFormWarranty(e.target.value)}
                     />
@@ -381,10 +397,10 @@ export default function Assets() {
                       <span className="text-[11px] font-medium text-text-muted">
                         {formImage ? formImage.name : 'Click to drag & upload image'}
                       </span>
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        className="hidden" 
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
                         id="form-image-uploader"
                         onChange={(e) => {
                           if (e.target.files && e.target.files.length > 0) {
@@ -414,7 +430,7 @@ export default function Assets() {
                   <div className="bg-white p-6 border border-border-light rounded-lg shadow-sm flex flex-col items-center justify-center space-y-4">
                     <QRCodeCanvas
                       id="qr-code-canvas"
-                      value={`${window.location.origin}/assets/${registeredAsset.id}`}
+                      value={`${qrOrigin}/assets/${registeredAsset.id}`}
                       size={160}
                       level="H"
                       includeMargin={true}
@@ -426,13 +442,13 @@ export default function Assets() {
                   </div>
 
                   <div className="space-y-2">
-                    <button 
+                    <button
                       onClick={() => downloadQR(registeredAsset.id)}
                       className="btn-primary w-full flex items-center justify-center gap-2"
                     >
                       <Download size={15} /> Download QR Code PNG
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         resetForm();
                         setIsPanelOpen(false);
@@ -449,16 +465,16 @@ export default function Assets() {
             {/* Footer containing action buttons */}
             {!registeredAsset && (
               <div className="h-16 border-t border-border-light flex items-center justify-end px-6 gap-2 bg-gray-50/50">
-                <button 
-                  type="button" 
-                  onClick={() => setIsPanelOpen(false)} 
+                <button
+                  type="button"
+                  onClick={() => setIsPanelOpen(false)}
                   className="btn-secondary py-1.5 px-4 text-xs font-medium"
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
-                  form="asset-register-form" 
+                <button
+                  type="submit"
+                  form="asset-register-form"
                   className="btn-primary py-1.5 px-4 text-xs font-semibold"
                 >
                   Confirm Registration

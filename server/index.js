@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import os from 'os';
 import db from './db.js';
 
 const app = express();
@@ -422,6 +423,29 @@ app.get('/api/ai/maintenance-today', (req, res) => {
       WHERE mr.status = 'Pending' AND mr.created_at = ?
     `).all(today);
     res.json(rows);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/system/ip → Retrieves local network interface IP address
+app.get('/api/system/ip', (req, res) => {
+  try {
+    const interfaces = os.networkInterfaces();
+    let localIp = '127.0.0.1';
+    for (const devName in interfaces) {
+      const iface = interfaces[devName];
+      if (!iface) continue;
+      for (let i = 0; i < iface.length; i++) {
+        const alias = iface[i];
+        if (alias.family === 'IPv4' && alias.address !== '127.0.0.1' && !alias.internal) {
+          localIp = alias.address;
+          break;
+        }
+      }
+      if (localIp !== '127.0.0.1') break;
+    }
+    res.json({ ip: localIp });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
