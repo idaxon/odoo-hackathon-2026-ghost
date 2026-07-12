@@ -87,12 +87,14 @@ Follow these steps to demonstrate the full capabilities of AssetFlow:
 5. The **Location Trail** at the bottom updates with the new entry, and the static department metadata field at the top dynamically swaps to: **"Last Seen: Engineering Block 3 (just now)"**.
 6. Switch viewports or scan on a mobile phone to see the sidebar and topbar hide automatically, focusing 100% of the screen on the scanned asset check-in.
 
-### Step 3: Conflict-Free Scheduling (Bookings Page)
+### Step 3: Conflict-Free Scheduling & Real-time Grid (Bookings Page)
 1. Navigate to the **Bookings** tab.
-2. Attempt to create a conflicting reservation for **Meeting Room A** (e.g., matching the pre-seeded time slots).
-3. The booking is blocked, showing a warning: *"Schedule conflict detected!"*.
-4. The system automatically recommends an available alternative resource (e.g., *"Meeting Room B"*).
-5. Click the green **Book Instead** button to schedule the slot instantly.
+2. Review the **Today's Resource Schedule** Gantt-style grid: it displays visual hourly blocks (8 AM - 8 PM) for core assets, highlighting occupied slots in red (showing booking initials) and free slots in gray.
+3. Click **New Booking** to open the panel.
+4. **Trigger Overlap Preset**: Click the **Simulate Room B Conflict** hotkey. The form pre-fills with values (Meeting Room B, 14:00 - 16:00) that directly overlap with John Doe's booking.
+5. Click **Confirm Booking**. The system immediately blocks the request with a warning and suggests **Meeting Room A** instead.
+6. Click **Book Instead** to successfully schedule the alternative slot.
+7. Locate your new booking card and click **Cancel & Release**. Confirm the prompt to immediately delete the reservation, free up the timeline block grid, and record the release in the activity logs.
 
 ### Step 4: Maintenance QR Verification & Timeline Handoff (Maintenance Page)
 1. Navigate to the **Maintenance** tab.
