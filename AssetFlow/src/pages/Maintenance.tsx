@@ -33,6 +33,13 @@ export default function Maintenance() {
   const [formPriority, setFormPriority] = useState<'Low' | 'Medium' | 'High' | 'Critical'>('Medium');
   const [formDesc, setFormDesc] = useState('');
 
+  // Resolve Confirmation State
+  const [selectedTicket, setSelectedTicket] = useState<MaintenanceRequest | null>(null);
+  const [isResolveModalOpen, setIsResolveModalOpen] = useState(false);
+  const [resolutionNotes, setResolutionNotes] = useState('');
+  const [scannedCode, setScannedCode] = useState('');
+  const [verifyStatus, setVerifyStatus] = useState<'none' | 'success' | 'fail'>('none');
+
   const loadRequests = async () => {
     try {
       setLoading(true);
@@ -55,12 +62,46 @@ export default function Maintenance() {
     loadRequests();
   }, []);
 
-  const handleResolve = async (id: number) => {
+  const handleResolveClick = (ticket: MaintenanceRequest) => {
+    setSelectedTicket(ticket);
+    setResolutionNotes('');
+    setScannedCode('');
+    setVerifyStatus('none');
+    setIsResolveModalOpen(true);
+  };
+
+  const handleResolveSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTicket) return;
+
     try {
-      await api.resolveMaintenanceRequest(id);
-      loadRequests(); // Refetch database status
-    } catch (err) {
-      console.error('Failed to resolve maintenance request:', err);
+      await api.resolveMaintenanceRequest(selectedTicket.id, {
+        resolution_notes: resolutionNotes,
+        scanned_code: scannedCode
+      });
+      setIsResolveModalOpen(false);
+      setSelectedTicket(null);
+      loadRequests();
+    } catch (error) {
+      console.error('Failed to resolve maintenance request:', error);
+    }
+  };
+
+  const handleSimulateScan = () => {
+    if (!selectedTicket) return;
+    setScannedCode(selectedTicket.asset_code);
+    setVerifyStatus('success');
+  };
+
+  const handleCodeChange = (val: string) => {
+    setScannedCode(val);
+    if (!selectedTicket) return;
+    if (val.trim() === '') {
+      setVerifyStatus('none');
+    } else if (val.trim() === selectedTicket.asset_code) {
+      setVerifyStatus('success');
+    } else {
+      setVerifyStatus('fail');
     }
   };
 
@@ -206,7 +247,7 @@ export default function Maintenance() {
                   </span>
                   {request.status !== 'Resolved' ? (
                     <button 
-                      onClick={() => handleResolve(request.id)}
+                      onClick={() => handleResolveClick(request)}
                       className="btn-secondary py-1.5 px-3 text-xs text-secondary border-secondary/20 hover:bg-secondary/5 font-semibold"
                     >
                       Resolve Issue
@@ -329,6 +370,103 @@ export default function Maintenance() {
                 Submit Request
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Resolve Confirmation Dialog Modal */}
+      {isResolveModalOpen && selectedTicket && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop overlay */}
+          <div className="absolute inset-0 bg-black/40" onClick={() => setIsResolveModalOpen(false)}></div>
+          
+          {/* Modal Container */}
+          <div className="bg-white rounded shadow-xl border border-border-light w-full max-w-md overflow-hidden relative z-10 animate-scale-up font-sans">
+            {/* Header */}
+            <div className="h-14 border-b border-border-light flex items-center justify-between px-6 bg-gray-50/50">
+              <h3 className="font-bold text-text text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <Wrench size={14} className="text-secondary" /> Resolve Ticket #{selectedTicket.id}
+              </h3>
+              <button 
+                onClick={() => setIsResolveModalOpen(false)}
+                className="text-text-muted hover:text-text p-1.5 rounded hover:bg-gray-100 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleResolveSubmit}>
+              <div className="p-6 space-y-4">
+                <div className="space-y-1">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted block">Asset under Maintenance</span>
+                  <p className="text-sm font-semibold text-text">{selectedTicket.asset_name} ({selectedTicket.asset_code})</p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-text-muted">Resolution Description / Actions Taken *</label>
+                  <textarea
+                    required
+                    rows={3}
+                    className="input-premium w-full text-sm"
+                    placeholder="e.g. Cleared paper jam, replaced roller, ran test sheets..."
+                    value={resolutionNotes}
+                    onChange={(e) => setResolutionNotes(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-text-muted">Confirm Asset QR Verification (Optional)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="input-premium flex-1 text-sm font-mono"
+                      placeholder="Scan or type Asset ID code..."
+                      value={scannedCode}
+                      onChange={(e) => handleCodeChange(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSimulateScan}
+                      className="btn-secondary py-1.5 px-3 text-xs font-semibold bg-gray-50 border-border-light hover:bg-gray-100"
+                    >
+                      Simulate Scan
+                    </button>
+                  </div>
+
+                  {verifyStatus === 'success' && (
+                    <p className="text-[10px] font-semibold text-green-700 flex items-center gap-1 mt-1">
+                      <CheckCircle2 size={12} /> Asset verification matches. Match confirmed.
+                    </p>
+                  )}
+                  {verifyStatus === 'fail' && (
+                    <p className="text-[10px] font-semibold text-red-600 flex items-center gap-1 mt-1">
+                      <AlertCircle size={12} /> Warning: Scanned code does not match ticket asset code ({selectedTicket.asset_code}).
+                    </p>
+                  )}
+                </div>
+
+                <div className="p-3 bg-gray-50 border border-border-light rounded text-[10px] text-text-muted leading-relaxed">
+                  <strong>Handoff:</strong> Setting status to Resolved updates virtual diagnostics health back to 95% and appends this event block directly inside the digital twin lifecycle timeline.
+                </div>
+              </div>
+
+              {/* Footer Actions */}
+              <div className="h-14 border-t border-border-light flex items-center justify-end px-6 gap-2 bg-gray-50/50">
+                <button
+                  type="button"
+                  onClick={() => setIsResolveModalOpen(false)}
+                  className="btn-secondary py-1.5 px-4 text-xs font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary py-1.5 px-4 text-xs font-semibold"
+                >
+                  Complete Resolution
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

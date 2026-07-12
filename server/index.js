@@ -313,15 +313,20 @@ app.post('/api/maintenance', (req, res) => {
 // PATCH /api/maintenance/:id/resolve
 app.patch('/api/maintenance/:id/resolve', (req, res) => {
   const { id } = req.params;
+  const { resolution_notes, scanned_code } = req.body || {};
   try {
     const request = db.prepare('SELECT * FROM maintenance_requests WHERE id = ?').get(id);
     if (!request) return res.status(404).json({ error: 'Request not found.' });
 
     const today = new Date().toISOString().split('T')[0];
+    const notes = resolution_notes || 'Routine repairs completed';
+    const updatedDesc = request.description
+      ? `${request.description} | Resolution Notes: ${notes}`
+      : `Resolution Notes: ${notes}`;
 
-    // Mark ticket resolved
-    db.prepare('UPDATE maintenance_requests SET status = "Resolved", resolved_at = ? WHERE id = ?')
-      .run(today, id);
+    // Mark ticket resolved and store notes
+    db.prepare('UPDATE maintenance_requests SET status = "Resolved", resolved_at = ?, description = ? WHERE id = ?')
+      .run(today, updatedDesc, id);
 
     // Update asset parameters
     const asset = db.prepare('SELECT * FROM assets WHERE id = ?').get(request.asset_id);
@@ -336,7 +341,9 @@ app.patch('/api/maintenance/:id/resolve', (req, res) => {
         WHERE id = ?
       `).run(newStatus, today, asset.id);
 
-      logActivity('System Maintenance', 'resolved ticket', `for ${asset.name}`);
+      const isVerified = scanned_code && scanned_code.trim() === asset.asset_code;
+      const verifySuffix = isVerified ? ' (verified QR match)' : scanned_code ? ' (mismatched QR)' : ' (unverified)';
+      logActivity('System Maintenance', `resolved ticket${verifySuffix}`, `for ${asset.name}`);
     }
 
     res.json({ message: 'Maintenance request resolved successfully.' });

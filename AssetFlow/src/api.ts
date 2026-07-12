@@ -33,7 +33,7 @@ export const api = {
   createBooking: (data: any) => request('/bookings', { method: 'POST', body: JSON.stringify(data) }),
   getMaintenanceRequests: () => request('/maintenance'),
   createMaintenanceRequest: (data: any) => request('/maintenance', { method: 'POST', body: JSON.stringify(data) }),
-  resolveMaintenanceRequest: (id: number) => request(`/maintenance/${id}/resolve`, { method: 'PATCH' }),
+  resolveMaintenanceRequest: (id: number, data?: any) => request(`/maintenance/${id}/resolve`, { method: 'PATCH', body: data ? JSON.stringify(data) : undefined }),
   getActivityLogs: () => request('/activity-logs'),
   
   // AI recommendations
