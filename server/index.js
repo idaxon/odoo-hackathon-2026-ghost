@@ -9,6 +9,12 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json());
 
+// Request logger middleware
+app.use((req, res, next) => {
+  console.log(`[API REQUEST] ${req.method} ${req.url}`, req.body ? `- Body: ${JSON.stringify(req.body)}` : '');
+  next();
+});
+
 // Helper to get formatted local time
 const getLocalTime = () => {
   return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
@@ -325,7 +331,7 @@ app.patch('/api/maintenance/:id/resolve', (req, res) => {
       : `Resolution Notes: ${notes}`;
 
     // Mark ticket resolved and store notes
-    db.prepare('UPDATE maintenance_requests SET status = "Resolved", resolved_at = ?, description = ? WHERE id = ?')
+    db.prepare("UPDATE maintenance_requests SET status = 'Resolved', resolved_at = ?, description = ? WHERE id = ?")
       .run(today, updatedDesc, id);
 
     // Update asset parameters
