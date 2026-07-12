@@ -41,5 +41,6 @@ export const api = {
   getAIReplaceCandidates: () => request('/ai/replace-candidates'),
   getAIAvailableCategory: (category: string) => request(`/ai/available/${category}`),
   getAIMaintenanceToday: () => request('/ai/maintenance-today'),
-  getSystemIp: () => request('/system/ip')
+  getSystemIp: () => request('/system/ip'),
+  getAssetVoice: (id: string) => request(`/assets/${id}/voice`)
 };

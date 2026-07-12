@@ -167,3 +167,20 @@ body {
   }
 }
 
+/* Asset Voice bubble appear animation */
+.animate-appear {
+  animation: slide-up-fade 0.15s ease-out forwards;
+}
+
+@keyframes slide-up-fade {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+

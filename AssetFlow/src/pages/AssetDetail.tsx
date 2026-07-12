@@ -41,6 +41,7 @@ export default function AssetDetail() {
   const [loading, setLoading] = useState(true);
   const [asset, setAsset] = useState<AssetDetailData | null>(null);
   const [qrOrigin, setQrOrigin] = useState(window.location.origin);
+  const [voiceText, setVoiceText] = useState<string>('');
 
   // Allocation Drawer State
   const [isAllocOpen, setIsAllocOpen] = useState(false);
@@ -75,6 +76,8 @@ export default function AssetDetail() {
       setLoading(true);
       const data = await api.getAssetById(assetId);
       setAsset(data);
+      const voiceRes = await api.getAssetVoice(assetId);
+      setVoiceText(voiceRes.voiceText || '');
     } catch (error) {
       console.error('Failed to load asset details:', error);
     } finally {
@@ -226,6 +229,19 @@ export default function AssetDetail() {
           </div>
         </div>
       </div>
+
+      {/* Dynamic Asset Voice Bubble Panel */}
+      {voiceText && (
+        <div className="card-premium p-4 border-l-4 border-l-primary bg-white shadow-sm flex items-start gap-4 animate-appear">
+          <div className="w-9 h-9 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+            {getCategoryIcon(asset.category)}
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm italic text-text leading-relaxed font-medium">"{voiceText}"</p>
+            <p className="text-[10px] uppercase font-bold tracking-wider text-text-muted">— {asset.name}</p>
+          </div>
+        </div>
+      )}
 
       {/* Main Details Panel Layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

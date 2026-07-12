@@ -451,6 +451,59 @@ app.get('/api/system/ip', (req, res) => {
   }
 });
 
+// GET /api/assets/:id/voice → Returns generated first-person message
+app.get('/api/assets/:id/voice', (req, res) => {
+  const { id } = req.params;
+  try {
+    const asset = db.prepare(`
+      SELECT a.*, d.name as department_name
+      FROM assets a
+      JOIN departments d ON a.department_id = d.id
+      WHERE a.id = ? OR a.asset_code = ?
+    `).get(id, id);
+
+    if (!asset) {
+      return res.status(404).json({ error: 'Asset not found.' });
+    }
+
+    // Check repair count
+    const repairCountRow = db.prepare('SELECT COUNT(*) as count FROM maintenance_requests WHERE asset_id = ?').get(asset.id);
+    const repairCount = repairCountRow.count || 0;
+
+    let voiceText = '';
+
+    // Condition 1: replacement_cost < repair_cost
+    if (asset.replacement_cost && asset.repair_cost && asset.replacement_cost < asset.repair_cost) {
+      voiceText = `I'm ${asset.name}. I've needed repairs ${repairCount} times, and honestly, replacing me now (₹${asset.replacement_cost}) makes more sense than fixing me again (₹${asset.repair_cost}).`;
+    }
+    // Condition 2: idle_since_date is 20+ days ago
+    else if (asset.idle_since_date) {
+      const days = Math.floor((new Date() - new Date(asset.idle_since_date)) / (1000 * 60 * 60 * 24));
+      if (days >= 20) {
+        voiceText = `I'm ${asset.name}. I've been sitting idle in ${asset.department_name} for ${days} days. Someone in another department could probably use me.`;
+      }
+    }
+
+    // Condition 3: health_score < 50
+    if (!voiceText && asset.health_score !== null && asset.health_score < 50) {
+      voiceText = `I'm ${asset.name}. My health score has dropped to ${asset.health_score}/100 — I could use some maintenance soon.`;
+    }
+    // Condition 4: health_score > 85
+    else if (!voiceText && asset.health_score !== null && asset.health_score > 85) {
+      voiceText = `I'm ${asset.name}. I'm in great shape — ${asset.health_score}/100 — no concerns right now.`;
+    }
+    // Condition 5: Default neutral
+    else if (!voiceText) {
+      const lastMaint = asset.last_maintenance_date ? `last inspected on ${asset.last_maintenance_date}` : 'not inspected recently';
+      voiceText = `I'm ${asset.name}, currently deployed in ${asset.department_name}. My status is ${asset.status === 'In Use' ? 'Allocated' : asset.status} and condition is ${asset.condition || 'normal'}. I was ${lastMaint}.`;
+    }
+
+    res.json({ voiceText });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Start Server
 app.listen(PORT, () => {
   console.log(`AssetFlow backend listening on http://localhost:${PORT}`);
