@@ -1,31 +1,34 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useSearchParams } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import AIAssistant from './AIAssistant';
 
 export default function Layout() {
+  const [searchParams] = useSearchParams();
+  const isScanned = searchParams.get('scan') === 'true';
+
   return (
     <div className="min-h-screen bg-bg text-text relative">
-      {/* Sidebar Nav - Desktop only */}
-      <div className="hidden lg:block">
+      {/* Sidebar Nav - Hide if scanned public link, otherwise desktop only */}
+      <div className={isScanned ? 'hidden' : 'hidden lg:block'}>
         <Sidebar />
       </div>
 
       {/* Main Page Area */}
-      <div className="lg:pl-60 flex flex-col min-h-screen w-full">
-        {/* Topbar Info / Utilities - Desktop only */}
-        <div className="hidden lg:block">
+      <div className={isScanned ? 'w-full flex flex-col min-h-screen' : 'lg:pl-60 flex flex-col min-h-screen w-full'}>
+        {/* Topbar Info / Utilities - Hide if scanned public link, otherwise desktop only */}
+        <div className={isScanned ? 'hidden' : 'hidden lg:block'}>
           <Topbar />
         </div>
 
         {/* Viewport for Sub-routes */}
-        <main className="flex-1 p-4 lg:p-8 overflow-y-auto">
+        <main className={isScanned ? 'flex-1 p-4 overflow-y-auto font-sans' : 'flex-1 p-4 lg:p-8 overflow-y-auto'}>
           <Outlet />
         </main>
       </div>
 
-      {/* Floating AI Assistant Widget - Desktop only */}
-      <div className="hidden lg:block">
+      {/* Floating AI Assistant Widget - Hide if scanned public link, otherwise desktop only */}
+      <div className={isScanned ? 'hidden' : 'hidden lg:block'}>
         <AIAssistant />
       </div>
     </div>

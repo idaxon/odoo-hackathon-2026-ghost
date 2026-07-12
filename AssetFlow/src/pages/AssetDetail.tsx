@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Cpu, Smartphone, Monitor, HardDrive, Sparkles, AlertCircle, Wrench, Battery, X, User, CheckCircle2 } from 'lucide-react';
 import { api } from '../api';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -34,6 +34,8 @@ interface AssetDetailData {
 export default function AssetDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isScanned = searchParams.get('scan') === 'true';
 
   // Load States
   const [loading, setLoading] = useState(true);
@@ -194,7 +196,7 @@ export default function AssetDetail() {
         {/* Desktop-only back navigation */}
         <button 
           onClick={() => navigate('/assets')}
-          className="hidden lg:flex btn-secondary text-primary border-border-light hover:bg-gray-50 items-center gap-2 py-1.5 px-3 text-xs font-semibold"
+          className={isScanned ? 'hidden' : 'hidden lg:flex btn-secondary text-primary border-border-light hover:bg-gray-50 items-center gap-2 py-1.5 px-3 text-xs font-semibold'}
         >
           <ArrowLeft size={14} /> Back to Assets
         </button>
@@ -209,7 +211,7 @@ export default function AssetDetail() {
                 setIsTransferMode(false);
                 setIsAllocOpen(true);
               }}
-              className="hidden lg:block btn-primary py-1.5 px-4 text-xs font-semibold"
+              className={isScanned ? 'hidden' : 'hidden lg:block btn-primary py-1.5 px-4 text-xs font-semibold'}
             >
               Allocate / Transfer Asset
             </button>
@@ -293,7 +295,7 @@ export default function AssetDetail() {
                     document.body.removeChild(downloadLink);
                   }
                 }}
-                className="hidden lg:flex btn-secondary py-1 px-2.5 text-[10px] mt-2 font-semibold items-center gap-1.5 bg-gray-50 border-border-light hover:bg-gray-100"
+                className={isScanned ? 'hidden' : 'hidden lg:flex btn-secondary py-1 px-2.5 text-[10px] mt-2 font-semibold items-center gap-1.5 bg-gray-50 border-border-light hover:bg-gray-100'}
               >
                 Download QR Code
               </button>
@@ -301,7 +303,7 @@ export default function AssetDetail() {
             <div className="bg-white p-2 border border-border-light rounded shadow-sm flex-shrink-0">
               <QRCodeCanvas
                 id="twin-qr-canvas"
-                value={`${qrOrigin}/assets/${asset.asset_code}`}
+                value={`${qrOrigin}/assets/${asset.asset_code}?scan=true`}
                 size={84}
                 level="M"
                 includeMargin={true}
