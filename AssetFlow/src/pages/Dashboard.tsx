@@ -1,103 +1,105 @@
-import { Package, Calendar, AlertTriangle, Activity, ArrowRight, Server } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 export default function Dashboard() {
-  const stats = [
-    { label: 'Total Assets', value: '1,482', change: '+12 this week', icon: Package, color: 'text-primary' },
-    { label: 'Active Bookings', value: '84', change: '8 pending approval', icon: Calendar, color: 'text-[#017E84]' },
-    { label: 'In Maintenance', value: '12', change: '2 high priority', icon: AlertTriangle, color: 'text-red-600' },
-    { label: 'Utilization Rate', value: '87.4%', change: '+2.1% MoM', icon: Activity, color: 'text-green-600' },
+  // Format today's date dynamically
+  const todayStr = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+
+  const insights = [
+    {
+      id: 'insight-1',
+      type: 'warning',
+      text: 'Printer P17 shows declining health — schedule maintenance',
+      borderClass: 'border-l-4 border-amber-500 bg-amber-50/30'
+    },
+    {
+      id: 'insight-2',
+      type: 'cost',
+      text: '₹2.3L worth of assets idle for 30+ days',
+      borderClass: 'border-l-4 border-secondary bg-secondary/5'
+    },
+    {
+      id: 'insight-3',
+      type: 'conflict',
+      text: 'Meeting Room B has 2 overlapping bookings',
+      borderClass: 'border-l-4 border-primary bg-primary/5'
+    },
+    {
+      id: 'insight-4',
+      type: 'positive',
+      text: 'Asset utilization up 6% this month',
+      borderClass: 'border-l-4 border-secondary bg-secondary/5'
+    }
   ];
 
-  const recentActivities = [
-    { id: '1', user: 'Sarah Connor', action: 'Booked MacBook Pro 16"', time: '10 mins ago', status: 'Approved', statusColor: 'bg-green-50 text-green-700 border-green-200' },
-    { id: '2', user: 'John Doe', action: 'Reported issue on Server Rack B4', time: '1 hour ago', status: 'Maintenance', statusColor: 'bg-amber-50 text-amber-700 border-amber-200' },
-    { id: '3', user: 'Alex Mercer', action: 'Returned iPad Pro 12.9"', time: '3 hours ago', status: 'Completed', statusColor: 'bg-blue-50 text-blue-700 border-blue-200' },
-    { id: '4', user: 'Elena Rostova', action: 'Requested projector for Room 402', time: '5 hours ago', status: 'Pending', statusColor: 'bg-gray-100 text-gray-700 border-gray-200' },
+  const stats = [
+    { label: 'Total Assets', value: '1,482' },
+    { label: 'Available', value: '864' },
+    { label: 'Allocated', value: '606' },
+    { label: 'Under Maintenance', value: '12' },
+    { label: 'Utilization %', value: '87.4%' },
+    { label: 'Potential Savings', value: '₹2.3L' }
   ];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-text">Dashboard</h1>
-        <p className="text-sm text-text-muted">Real-time overview of your enterprise assets and operations.</p>
-      </div>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <div key={stat.label} className="card-premium p-4 flex items-start justify-between">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-text-muted uppercase tracking-wider">{stat.label}</p>
-                <p className="text-2xl font-bold text-text">{stat.value}</p>
-                <p className="text-xs text-text-muted">{stat.change}</p>
-              </div>
-              <div className={`p-2 bg-gray-50 rounded ${stat.color}`}>
-                <Icon size={18} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Row 2: Recent Activity & Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activity */}
-        <div className="card-premium p-5 lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between border-b border-border-light pb-3">
-            <h3 className="font-semibold text-text">Recent Activity</h3>
-            <button className="text-xs font-semibold text-secondary hover:underline flex items-center gap-1">
-              View all log <ArrowRight size={14} />
-            </button>
-          </div>
-          <div className="divide-y divide-border-light">
-            {recentActivities.map((act) => (
-              <div key={act.id} className="py-3 flex items-center justify-between first:pt-0 last:pb-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center font-medium text-xs text-primary">
-                    {act.user.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-text">{act.user}</p>
-                    <p className="text-xs text-text-muted">{act.action} &bull; {act.time}</p>
-                  </div>
-                </div>
-                <span className={`tag-status border ${act.statusColor}`}>
-                  {act.status}
-                </span>
-              </div>
-            ))}
-          </div>
+    <div className="space-y-8 max-w-5xl">
+      {/* Welcome Header */}
+      <div className="flex flex-col md:flex-row justify-between md:items-end gap-2">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-text">Good Morning, Daksh</h1>
+          <p className="text-sm text-text-muted">{todayStr}</p>
         </div>
+      </div>
 
-        {/* Quick Actions / Critical Issues */}
-        <div className="card-premium p-5 space-y-4">
-          <div className="border-b border-border-light pb-3">
-            <h3 className="font-semibold text-text">Quick Actions</h3>
-          </div>
-          <div className="space-y-2">
-            <button className="btn-primary w-full text-center text-sm py-2">
-              + Register New Asset
-            </button>
-            <button className="btn-secondary w-full text-center text-sm py-2">
-              New Booking Request
-            </button>
-            <button className="btn-secondary w-full text-center text-sm py-2">
-              Report System Issue
-            </button>
-          </div>
-
-          <div className="pt-4 border-t border-border-light">
-            <h4 className="text-xs font-semibold text-text-muted uppercase tracking-wider mb-2">Critical Notifications</h4>
-            <div className="p-3 bg-red-50/50 border border-red-100 rounded-md flex items-start gap-2.5">
-              <Server className="text-red-600 mt-0.5" size={16} />
-              <div>
-                <p className="text-xs font-semibold text-red-950">Rack B12 Temp Warning</p>
-                <p className="text-[11px] text-red-700">Ambient temp is exceeding 26&deg;C. Check air flow.</p>
-              </div>
+      {/* Today's AI Brief (Focal Point Card) */}
+      <div className="card-premium p-6 space-y-4 border-l-4 border-l-primary shadow-sm bg-white">
+        <div className="flex items-center gap-2 pb-2 border-b border-border-light">
+          <Sparkles size={16} className="text-primary animate-pulse" />
+          <h2 className="text-base font-bold text-text m-0">Today's AI Brief</h2>
+        </div>
+        
+        <div className="space-y-3">
+          {insights.map((insight) => (
+            <div 
+              key={insight.id} 
+              className={`p-3.5 rounded-[4px] text-sm text-text font-medium flex items-center justify-between ${insight.borderClass}`}
+            >
+              <span>{insight.text}</span>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-text-muted px-2 py-0.5 bg-white border border-border-light rounded-[4px]">
+                {insight.type}
+              </span>
             </div>
-          </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Action Buttons Row */}
+      <div className="flex flex-wrap gap-3">
+        <button className="btn-secondary text-primary border-primary hover:bg-primary/5 font-semibold text-sm rounded-[6px] py-2 px-4 border">
+          Reallocate Assets
+        </button>
+        <button className="btn-secondary text-primary border-primary hover:bg-primary/5 font-semibold text-sm rounded-[6px] py-2 px-4 border">
+          Schedule Maintenance
+        </button>
+        <button className="btn-secondary text-primary border-primary hover:bg-primary/5 font-semibold text-sm rounded-[6px] py-2 px-4 border">
+          View Recommendations
+        </button>
+      </div>
+
+      {/* Stats Cards Section */}
+      <div className="space-y-4">
+        <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider">Operational Summary</h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {stats.map((stat) => (
+            <div key={stat.label} className="card-premium p-4 flex flex-col justify-between bg-white">
+              <span className="text-2xl font-bold text-text tracking-tight">{stat.value}</span>
+              <span className="text-xs text-text-muted font-medium mt-1 truncate">{stat.label}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
